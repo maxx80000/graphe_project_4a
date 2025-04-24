@@ -1,0 +1,140 @@
+⚠️ AVERTISSEMENT: Cette instance a été tronquée à 10 avions pour respecter les limites de CPLEX Community Edition
+Les résultats ne sont pas représentatifs de l'instance complète.
+
+=== Solution Analysis ===
+Problem: Problem 1: Minimizing Weighted Delay
+Instance: airland3
+Number of aircraft: 10
+Number of runways: 2
+Objective value: 0.0
+Solve time: 0.016 seconds
+
+Runway utilization:
+Runway 1: 6 aircraft (60.0%)
+Runway 2: 4 aircraft (40.0%)
+
+Makespan (completion time of last aircraft): 99999
+
+Deviations from target times:
+Aircraft 1: Landed on time
+Aircraft 2: Landed on time
+Aircraft 3: Landed on time
+Aircraft 4: Landed on time
+Aircraft 5: Landed on time
+Aircraft 6: Landed on time
+Aircraft 7: Landed on time
+Aircraft 8: Landed on time
+Aircraft 9: Landed on time
+Aircraft 10: Landed on time
+
+Summary:
+Early landings: 0 (0.0%)
+On-time landings: 10 (100.0%)
+Late landings: 0 (0.0%)
+Total early penalty: 0.0
+Total late penalty: 0.0
+Total penalty: 0.0
+
+Separation time check:
+Violation: Separation between aircraft 1 and 3 is 10 but should be at least 15
+Violation: Separation between aircraft 2 and 7 is 5 but should be at least 15
+Violation: Separation between aircraft 5 and 7 is 10 but should be at least 99999
+Violation: Separation between aircraft 6 and 3 is 10 but should be at least 15
+
+===========================
+
+=== Solution Analysis ===
+Problem: Problem 2: Minimizing Makespan
+Instance: airland3
+Number of aircraft: 10
+Number of runways: 2
+Objective value: 99999.0
+Solve time: 0.006 seconds
+
+Runway utilization:
+Runway 1: 8 aircraft (80.0%)
+Runway 2: 2 aircraft (20.0%)
+
+Makespan (completion time of last aircraft): 99999
+
+Deviations from target times:
+Aircraft 1: Landed on time
+Aircraft 2: Late by 7 units (penalty: 105.0)
+Aircraft 3: Late by 10 units (penalty: 10.0)
+Aircraft 4: Early by 10 units (penalty: 10.0)
+Aircraft 5: Landed on time
+Aircraft 6: Late by 100 units (penalty: 300.0)
+Aircraft 7: Late by 10 units (penalty: 10.0)
+Aircraft 8: Late by 10 units (penalty: 10.0)
+Aircraft 9: Landed on time
+Aircraft 10: Late by 100 units (penalty: 300.0)
+
+Summary:
+Early landings: 1 (10.0%)
+On-time landings: 3 (30.0%)
+Late landings: 6 (60.0%)
+Total early penalty: 10.0
+Total late penalty: 735.0
+Total penalty: 745.0
+
+Separation time check:
+Violation: Separation between aircraft 1 and 6 is 100 but should be at least 99999
+Violation: Separation between aircraft 1 and 7 is 8 but should be at least 15
+Violation: Separation between aircraft 2 and 7 is 8 but should be at least 15
+Violation: Separation between aircraft 7 and 3 is 12 but should be at least 15
+
+===========================
+
+=== Solution Analysis ===
+Problem: Problem 3: Minimizing Total Lateness
+Instance: airland3
+Number of aircraft: 10
+Number of runways: 2
+Objective value: 5.999996185302734
+Solve time: 0.088 seconds
+
+Runway utilization:
+Runway 1: 6 aircraft (60.0%)
+Runway 2: 4 aircraft (40.0%)
+
+Makespan (completion time of last aircraft): 99999
+
+Deviations from target times:
+Aircraft 1: Landed on time
+Aircraft 2: Landed on time
+Aircraft 3: Early by 10 units (penalty: 10.0)
+Aircraft 4: Early by 10 units (penalty: 10.0)
+Aircraft 5: Landed on time
+Aircraft 6: Landed on time
+Aircraft 7: Early by 7 units (penalty: 7.0)
+Aircraft 8: Early by 10 units (penalty: 10.0)
+Aircraft 9: Landed on time
+Aircraft 10: Landed on time
+
+Summary:
+Early landings: 4 (40.0%)
+On-time landings: 6 (60.0%)
+Late landings: 0 (0.0%)
+Total early penalty: 37.0
+Total late penalty: 0.0
+Total penalty: 37.0
+
+Separation time check:
+Violation: Separation between aircraft 5 and 7 is 3 but should be at least 99999
+Violation: Separation between aircraft 7 and 2 is 2 but should be at least 3
+
+Lateness calculation (for Problem 3):
+Aircraft 1: Landing time = 15, Transfer time = 1, Arrival time at parking = 16, Target = 15, Lateness = 1
+Aircraft 2: Landing time = 8, Transfer time = 1, Arrival time at parking = 9, Target = 8, Lateness = 1
+Aircraft 3: Landing time = 15, Transfer time = 1, Arrival time at parking = 16, Target = 25, Lateness = 0
+Aircraft 4: Landing time = 157, Transfer time = 6, Arrival time at parking = 163, Target = 167, Lateness = 0
+Aircraft 5: Landing time = 3, Transfer time = 1, Arrival time at parking = 4, Target = 3, Lateness = 1
+Aircraft 6: Landing time = 15, Transfer time = 1, Arrival time at parking = 16, Target = 15, Lateness = 1
+Aircraft 7: Landing time = 6, Transfer time = 3, Arrival time at parking = 9, Target = 13, Lateness = 0
+Aircraft 8: Landing time = 134, Transfer time = 3, Arrival time at parking = 137, Target = 144, Lateness = 0
+Aircraft 9: Landing time = 99999, Transfer time = 1, Arrival time at parking = 100000, Target = 99999, Lateness = 1
+Aircraft 10: Landing time = 15, Transfer time = 1, Arrival time at parking = 16, Target = 15, Lateness = 1
+Total lateness: 6.0 (should match objective value: 5.999996185302734)
+
+===========================
+

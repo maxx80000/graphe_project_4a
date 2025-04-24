@@ -1,0 +1,105 @@
+⚠️ AVERTISSEMENT: Cette instance a été tronquée à 10 avions pour respecter les limites de CPLEX Community Edition
+Les résultats ne sont pas représentatifs de l'instance complète.
+
+=== Solution Analysis ===
+Problem: Problem 1: Minimizing Weighted Delay (Heuristic)
+Instance: airland6
+Number of aircraft: 10
+Number of runways: 3
+Objective value: 17040.0
+Solve time: 0.0 seconds
+
+Runway utilization:
+Runway 1: 4 aircraft (40.0%)
+Runway 2: 4 aircraft (40.0%)
+Runway 3: 2 aircraft (20.0%)
+
+Makespan (completion time of last aircraft): 200
+
+Deviations from target times:
+Aircraft 1: Landed on time
+Aircraft 2: Landed on time
+Aircraft 3: Landed on time
+Aircraft 4: Early by 10 units (penalty: 10.0)
+Aircraft 5: Early by 10 units (penalty: 10.0)
+Aircraft 6: Landed on time
+Aircraft 7: Late by 85 units (penalty: 17000.0)
+Aircraft 8: Landed on time
+Aircraft 9: Early by 10 units (penalty: 10.0)
+Aircraft 10: Early by 10 units (penalty: 10.0)
+
+Summary:
+Early landings: 4 (40.0%)
+On-time landings: 5 (50.0%)
+Late landings: 1 (10.0%)
+Total early penalty: 40.0
+Total late penalty: 17000.0
+Total penalty: 17040.0
+
+Separation time check:
+Violation: Separation between aircraft 3 and 7 is 85 but should be at least 110
+Violation: Separation between aircraft 5 and 3 is 17 but should be at least 635
+Violation: Separation between aircraft 6 and 7 is 85 but should be at least 200
+
+===========================
+
+=== Solution Analysis ===
+Problem: Problem 2: Minimizing Makespan (Heuristic)
+Instance: airland6
+Number of aircraft: 10
+Number of runways: 3
+Objective value: 200.0
+Solve time: 0.0 seconds
+
+Runway utilization:
+Runway 1: 4 aircraft (40.0%)
+Runway 2: 4 aircraft (40.0%)
+Runway 3: 2 aircraft (20.0%)
+
+Makespan (completion time of last aircraft): 200
+
+Deviations from target times:
+Aircraft 1: Landed on time
+Aircraft 2: Landed on time
+Aircraft 3: Landed on time
+Aircraft 4: Early by 10 units (penalty: 10.0)
+Aircraft 5: Early by 10 units (penalty: 10.0)
+Aircraft 6: Landed on time
+Aircraft 7: Late by 85 units (penalty: 17000.0)
+Aircraft 8: Landed on time
+Aircraft 9: Early by 10 units (penalty: 10.0)
+Aircraft 10: Early by 10 units (penalty: 10.0)
+
+Summary:
+Early landings: 4 (40.0%)
+On-time landings: 5 (50.0%)
+Late landings: 1 (10.0%)
+Total early penalty: 40.0
+Total late penalty: 17000.0
+Total penalty: 17040.0
+
+Separation time check:
+Violation: Separation between aircraft 3 and 7 is 85 but should be at least 110
+Violation: Separation between aircraft 5 and 3 is 17 but should be at least 635
+Violation: Separation between aircraft 6 and 7 is 85 but should be at least 200
+
+===========================
+
+Error solving with Problem 3: Minimizing Total Lateness: CPLEX error: CPLEX Error  1016: Community Edition. Problem size limits exceeded. Purchase at http://ibm.biz/error1016.
+
+java.lang.RuntimeException: CPLEX error: CPLEX Error  1016: Community Edition. Problem size limits exceeded. Purchase at http://ibm.biz/error1016.
+
+	at alp.solver.Problem3Solver.solve(Problem3Solver.java:193)
+	at alp.Main.processInstances(Main.java:165)
+	at alp.Main.main(Main.java:108)
+Caused by: ilog.cplex.CpxException: CPLEX Error  1016: Community Edition. Problem size limits exceeded. Purchase at http://ibm.biz/error1016.
+
+	at ilog.cplex.CplexI.CALL(CplexI.java:4815)
+	at ilog.cplex.CplexI.setStatus(CplexI.java:6300)
+	at ilog.cplex.CplexI.access$500(CplexI.java:191)
+	at ilog.cplex.CplexI$SolveHandle.stop(CplexI.java:2998)
+	at ilog.cplex.CplexI.solve(CplexI.java:3037)
+	at ilog.cplex.CplexI.solve(CplexI.java:3029)
+	at ilog.cplex.IloCplex.solve(IloCplex.java:13257)
+	at alp.solver.Problem3Solver.solve(Problem3Solver.java:160)
+	... 2 more

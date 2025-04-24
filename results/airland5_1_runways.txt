@@ -1,0 +1,91 @@
+⚠️ AVERTISSEMENT: Cette instance a été tronquée à 10 avions pour respecter les limites de CPLEX Community Edition
+Les résultats ne sont pas représentatifs de l'instance complète.
+
+=== Solution Analysis ===
+Problem: Problem 1: Minimizing Weighted Delay (Heuristic)
+Instance: airland5
+Number of aircraft: 10
+Number of runways: 1
+Objective value: 107.0
+Solve time: 0.0 seconds
+
+Runway utilization:
+Runway 1: 10 aircraft (100.0%)
+
+Makespan (completion time of last aircraft): 99999
+
+Deviations from target times:
+Aircraft 1: Landed on time
+Aircraft 2: Landed on time
+Aircraft 3: Late by 8 units (penalty: 8.0)
+Aircraft 4: Late by 10 units (penalty: 10.0)
+Aircraft 5: Landed on time
+Aircraft 6: Late by 8 units (penalty: 24.0)
+Aircraft 7: Late by 10 units (penalty: 10.0)
+Aircraft 8: Early by 10 units (penalty: 10.0)
+Aircraft 9: Landed on time
+Aircraft 10: Late by 3 units (penalty: 45.0)
+
+Summary:
+Early landings: 1 (10.0%)
+On-time landings: 4 (40.0%)
+Late landings: 5 (50.0%)
+Total early penalty: 10.0
+Total late penalty: 97.0
+Total penalty: 107.0
+
+Separation time check:
+Violation: Separation between aircraft 3 and 7 is 2 but should be at least 3
+Violation: Separation between aircraft 5 and 7 is 20 but should be at least 99999
+Violation: Separation between aircraft 6 and 1 is 4 but should be at least 8
+Violation: Separation between aircraft 6 and 5 is 4 but should be at least 8
+Violation: Separation between aircraft 8 and 4 is 125 but should be at least 529
+
+===========================
+
+=== Solution Analysis ===
+Problem: Problem 2: Minimizing Makespan (Heuristic)
+Instance: airland5
+Number of aircraft: 10
+Number of runways: 1
+Objective value: 99999.0
+Solve time: 0.0 seconds
+
+Runway utilization:
+Runway 1: 10 aircraft (100.0%)
+
+Makespan (completion time of last aircraft): 99999
+
+Deviations from target times:
+Aircraft 1: Landed on time
+Aircraft 2: Landed on time
+Aircraft 3: Late by 1 units (penalty: 1.0)
+Aircraft 4: Late by 10 units (penalty: 10.0)
+Aircraft 5: Landed on time
+Aircraft 6: Late by 8 units (penalty: 24.0)
+Aircraft 7: Late by 10 units (penalty: 10.0)
+Aircraft 8: Early by 10 units (penalty: 10.0)
+Aircraft 9: Landed on time
+Aircraft 10: Late by 23 units (penalty: 345.0)
+
+Summary:
+Early landings: 1 (10.0%)
+On-time landings: 4 (40.0%)
+Late landings: 5 (50.0%)
+Total early penalty: 10.0
+Total late penalty: 390.0
+Total penalty: 400.0
+
+Separation time check:
+Violation: Separation between aircraft 5 and 7 is 20 but should be at least 99999
+Violation: Separation between aircraft 6 and 1 is 4 but should be at least 8
+Violation: Separation between aircraft 6 and 5 is 4 but should be at least 8
+Violation: Separation between aircraft 8 and 4 is 125 but should be at least 529
+
+===========================
+
+Error solving with Problem 3: Minimizing Total Lateness: No solution found for instance airland5
+java.lang.RuntimeException: No solution found for instance airland5
+	at alp.solver.Problem3Solver.solve(Problem3Solver.java:189)
+	at alp.Main.processInstances(Main.java:165)
+	at alp.Main.main(Main.java:108)

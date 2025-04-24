@@ -1,0 +1,148 @@
+⚠️ AVERTISSEMENT: Cette instance a été tronquée à 10 avions pour respecter les limites de CPLEX Community Edition
+Les résultats ne sont pas représentatifs de l'instance complète.
+
+=== Solution Analysis ===
+Problem: Problem 1: Minimizing Weighted Delay
+Instance: airland6
+Number of aircraft: 10
+Number of runways: 1
+Objective value: 0.0
+Solve time: 0.005 seconds
+
+Runway utilization:
+Runway 1: 10 aircraft (100.0%)
+
+Makespan (completion time of last aircraft): 210
+
+Deviations from target times:
+Aircraft 1: Landed on time
+Aircraft 2: Landed on time
+Aircraft 3: Landed on time
+Aircraft 4: Landed on time
+Aircraft 5: Landed on time
+Aircraft 6: Landed on time
+Aircraft 7: Landed on time
+Aircraft 8: Landed on time
+Aircraft 9: Landed on time
+Aircraft 10: Landed on time
+
+Summary:
+Early landings: 0 (0.0%)
+On-time landings: 10 (100.0%)
+Late landings: 0 (0.0%)
+Total early penalty: 0.0
+Total late penalty: 0.0
+Total penalty: 0.0
+
+Separation time check:
+Violation: Separation between aircraft 5 and 1 is 7 but should be at least 560
+Violation: Separation between aircraft 5 and 2 is 7 but should be at least 635
+Violation: Separation between aircraft 5 and 3 is 7 but should be at least 635
+Violation: Separation between aircraft 5 and 4 is 121 but should be at least 832
+Violation: Separation between aircraft 6 and 4 is 114 but should be at least 200
+Violation: Separation between aircraft 8 and 4 is 114 but should be at least 181
+Violation: Separation between aircraft 10 and 4 is 56 but should be at least 1032
+
+===========================
+
+=== Solution Analysis ===
+Problem: Problem 2: Minimizing Makespan
+Instance: airland6
+Number of aircraft: 10
+Number of runways: 1
+Objective value: 200.0
+Solve time: 0.004 seconds
+
+Runway utilization:
+Runway 1: 10 aircraft (100.0%)
+
+Makespan (completion time of last aircraft): 200
+
+Deviations from target times:
+Aircraft 1: Landed on time
+Aircraft 2: Landed on time
+Aircraft 3: Landed on time
+Aircraft 4: Early by 10 units (penalty: 10.0)
+Aircraft 5: Early by 10 units (penalty: 10.0)
+Aircraft 6: Landed on time
+Aircraft 7: Landed on time
+Aircraft 8: Landed on time
+Aircraft 9: Early by 10 units (penalty: 10.0)
+Aircraft 10: Early by 10 units (penalty: 10.0)
+
+Summary:
+Early landings: 4 (40.0%)
+On-time landings: 6 (60.0%)
+Late landings: 0 (0.0%)
+Total early penalty: 40.0
+Total late penalty: 0.0
+Total penalty: 40.0
+
+Separation time check:
+Violation: Separation between aircraft 5 and 1 is 17 but should be at least 560
+Violation: Separation between aircraft 5 and 2 is 17 but should be at least 635
+Violation: Separation between aircraft 5 and 3 is 17 but should be at least 635
+Violation: Separation between aircraft 5 and 4 is 121 but should be at least 832
+Violation: Separation between aircraft 6 and 4 is 104 but should be at least 200
+Violation: Separation between aircraft 8 and 4 is 104 but should be at least 181
+Violation: Separation between aircraft 10 and 4 is 56 but should be at least 1032
+
+===========================
+
+=== Solution Analysis ===
+Problem: Problem 3: Minimizing Total Lateness
+Instance: airland6
+Number of aircraft: 10
+Number of runways: 1
+Objective value: 6.0
+Solve time: 0.003 seconds
+
+Runway utilization:
+Runway 1: 10 aircraft (100.0%)
+
+Makespan (completion time of last aircraft): 200
+
+Deviations from target times:
+Aircraft 1: Landed on time
+Aircraft 2: Landed on time
+Aircraft 3: Landed on time
+Aircraft 4: Early by 10 units (penalty: 10.0)
+Aircraft 5: Early by 10 units (penalty: 10.0)
+Aircraft 6: Landed on time
+Aircraft 7: Landed on time
+Aircraft 8: Landed on time
+Aircraft 9: Early by 10 units (penalty: 10.0)
+Aircraft 10: Early by 10 units (penalty: 10.0)
+
+Summary:
+Early landings: 4 (40.0%)
+On-time landings: 6 (60.0%)
+Late landings: 0 (0.0%)
+Total early penalty: 40.0
+Total late penalty: 0.0
+Total penalty: 40.0
+
+Separation time check:
+Violation: Separation between aircraft 5 and 1 is 17 but should be at least 560
+Violation: Separation between aircraft 5 and 2 is 17 but should be at least 635
+Violation: Separation between aircraft 5 and 3 is 17 but should be at least 635
+Violation: Separation between aircraft 5 and 4 is 121 but should be at least 832
+Violation: Separation between aircraft 6 and 4 is 104 but should be at least 200
+Violation: Separation between aircraft 8 and 4 is 104 but should be at least 181
+Violation: Separation between aircraft 10 and 4 is 56 but should be at least 1032
+
+Lateness calculation (for Problem 3):
+Aircraft 1: Landing time = 96, Transfer time = 1, Arrival time at parking = 97, Target = 96, Lateness = 1
+Aircraft 2: Landing time = 96, Transfer time = 1, Arrival time at parking = 97, Target = 96, Lateness = 1
+Aircraft 3: Landing time = 96, Transfer time = 1, Arrival time at parking = 97, Target = 96, Lateness = 1
+Aircraft 4: Landing time = 200, Transfer time = 5, Arrival time at parking = 205, Target = 210, Lateness = 0
+Aircraft 5: Landing time = 79, Transfer time = 1, Arrival time at parking = 80, Target = 89, Lateness = 0
+Aircraft 6: Landing time = 96, Transfer time = 1, Arrival time at parking = 97, Target = 96, Lateness = 1
+Aircraft 7: Landing time = 96, Transfer time = 1, Arrival time at parking = 97, Target = 96, Lateness = 1
+Aircraft 8: Landing time = 96, Transfer time = 1, Arrival time at parking = 97, Target = 96, Lateness = 1
+Aircraft 9: Landing time = 200, Transfer time = 10, Arrival time at parking = 210, Target = 210, Lateness = 0
+Aircraft 10: Landing time = 144, Transfer time = 4, Arrival time at parking = 148, Target = 154, Lateness = 0
+Total lateness: 6.0 (should match objective value: 6.0)
+
+===========================
+
