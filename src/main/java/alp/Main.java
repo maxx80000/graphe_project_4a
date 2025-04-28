@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 import alp.analysis.SolutionAnalyzer;
 import alp.io.InstanceReader;
@@ -16,14 +17,50 @@ import alp.solver.ALPSolver;
 import alp.solver.Problem1Solver;
 import alp.solver.Problem2Solver;
 import alp.solver.Problem3Solver;
+import alp.visualization.ScheduleVisualizer;
+import alp.visualization.VisualizationManager;
 
 /**
  * Main class for the Aircraft Landing Problem project.
  */
 public class Main {
 
+    // Flag to control visualization
+    private static boolean enableVisualization = false;
+    // List to store all solutions for visualization at the end
+    private static List<ALPSolution> allSolutions = new ArrayList<>();
+
     public static void main(String[] args) {
         try {
+            // Ask user if they want visualizations
+            System.out.println("=== Aircraft Landing Problem Solver ===");
+            System.out.println("Ce programme résout des problèmes d'ordonnancement d'atterrissage d'avions.");
+            System.out.print("Voulez-vous activer la visualisation améliorée? (o/n): ");
+
+            try (Scanner scanner = new Scanner(System.in)) {
+                String response = scanner.nextLine().trim().toLowerCase();
+                enableVisualization = response.equals("o") || response.equals("oui") ||
+                        response.equals("y") || response.equals("yes");
+
+                if (enableVisualization) {
+                    System.out.println("Visualisation activée !");
+                    System.out.print(
+                            "Préférez-vous voir chaque solution individuellement (i) ou toutes à la fin (f)? (i/f): ");
+                    String viewMode = scanner.nextLine().trim().toLowerCase();
+                    boolean showIndividually = viewMode.equals("i") || viewMode.isEmpty();
+
+                    if (!showIndividually) {
+                        System.out.println("Les solutions seront visualisées ensemble à la fin du traitement.");
+                    } else {
+                        System.out.println("Chaque solution sera visualisée après son calcul.");
+                    }
+
+                    enableVisualization = true;
+                    // Si on choisit la visualisation groupée, on garde les solutions en mémoire
+                    allSolutions = showIndividually ? null : new ArrayList<>();
+                }
+            }
+
             // Create results directory if it doesn't exist
             Files.createDirectories(Paths.get("results"));
 
@@ -50,7 +87,7 @@ public class Main {
 
                 // Proposer le téléchargement automatique
                 System.out.print("Voulez-vous télécharger automatiquement les instances? (o/n): ");
-                try (java.util.Scanner scanner = new java.util.Scanner(System.in)) {
+                try (Scanner scanner = new Scanner(System.in)) {
                     String response = scanner.nextLine().trim().toLowerCase();
 
                     if (response.equals("o") || response.equals("oui") || response.equals("y")
@@ -83,7 +120,7 @@ public class Main {
 
                     // Proposer le téléchargement automatique
                     System.out.print("Voulez-vous télécharger automatiquement les instances? (o/n): ");
-                    try (java.util.Scanner scanner = new java.util.Scanner(System.in)) {
+                    try (Scanner scanner = new Scanner(System.in)) {
                         String response = scanner.nextLine().trim().toLowerCase();
 
                         if (response.equals("o") || response.equals("oui") || response.equals("y")
@@ -114,7 +151,14 @@ public class Main {
             }
 
             summaryWriter.close();
-            System.out.println("All done! Results written to the 'results' directory.");
+            System.out.println("Traitement terminé ! Les résultats ont été écrits dans le répertoire 'results'.");
+
+            // Si la visualisation groupée est activée, on affiche toutes les solutions à la
+            // fin
+            if (enableVisualization && allSolutions != null && !allSolutions.isEmpty()) {
+                System.out.println("Lancement de la visualisation groupée des solutions...");
+                VisualizationManager.launchVisualizer(allSolutions);
+            }
 
         } catch (IOException e) {
             System.err.println("Error: " + e.getMessage());
@@ -129,7 +173,7 @@ public class Main {
             List<ALPSolver> solvers, PrintWriter summaryWriter) {
         for (File instanceFile : instanceFiles) {
             String instanceName = instanceFile.getName().replace(".txt", "");
-            System.out.println("Processing instance: " + instanceName);
+            System.out.println("Traitement de l'instance: " + instanceName);
 
             // Identifier les petites instances compatibles avec CPLEX Community Edition
             boolean isSmallInstance = instanceName.equals("airland1");
@@ -139,7 +183,7 @@ public class Main {
                                                                         // instances
 
             for (int numRunways : runwayCounts) {
-                System.out.println("  With " + numRunways + " runway(s)");
+                System.out.println("  Avec " + numRunways + " piste(s)");
 
                 try {
                     // Read the instance
@@ -164,7 +208,7 @@ public class Main {
 
                     // Process with each solver
                     for (ALPSolver solver : solvers) {
-                        System.out.println("    Solving with " + solver.getName());
+                        System.out.println("    Résolution avec " + solver.getName());
 
                         try {
                             // Solve the instance
@@ -173,26 +217,37 @@ public class Main {
                             // Analyze the solution
                             SolutionAnalyzer.analyzeSolution(solution, resultsWriter);
 
-                            // Visualize the solution (uncomment to enable)
-                            // ScheduleVisualizer.visualizeSchedule(solution);
+                            // Store solution for grouped visualization if enabled
+                            if (enableVisualization && allSolutions != null) {
+                                allSolutions.add(solution);
+                            }
+
+                            // Visualize the solution if enabled and individual mode
+                            if (enableVisualization && allSolutions == null) {
+                                System.out.println("      Affichage de la visualisation...");
+                                ScheduleVisualizer.visualizeSchedule(solution);
+                            }
 
                             // Add to summary
                             summaryWriter.println(instanceName + "," + numRunways + "," +
                                     solver.getName() + "," + solution.getObjectiveValue() +
                                     "," + solution.getSolveTime());
 
-                            System.out.println("      Solved! Objective: " + solution.getObjectiveValue() +
-                                    ", Time: " + solution.getSolveTime() + "s");
+                            System.out.println("      Résolu ! Objectif: " + solution.getObjectiveValue() +
+                                    ", Temps: " + solution.getSolveTime() + "s");
                         } catch (Exception e) {
-                            System.err.println("      Error solving with " + solver.getName() + ": " + e.getMessage());
-                            resultsWriter.println("Error solving with " + solver.getName() + ": " + e.getMessage());
+                            System.err.println("      Erreur lors de la résolution avec " + solver.getName() + ": "
+                                    + e.getMessage());
+                            resultsWriter.println(
+                                    "Erreur lors de la résolution avec " + solver.getName() + ": " + e.getMessage());
                             e.printStackTrace(resultsWriter);
                         }
                     }
 
                     resultsWriter.close();
                 } catch (IOException e) {
-                    System.err.println("Error processing instance " + instanceName + ": " + e.getMessage());
+                    System.err
+                            .println("Erreur lors du traitement de l'instance " + instanceName + ": " + e.getMessage());
                 }
             }
         }
