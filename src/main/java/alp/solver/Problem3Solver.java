@@ -149,8 +149,8 @@ public class Problem3Solver implements ALPSolver {
                             cplex.addGe(x[j], expr);
                         }
                         
-                        // Either i lands before j or j lands before i
-                        cplex.addLe(cplex.sum(y[i][j], y[j][i]), 1);
+                        // Exactly one ordering per pair
+                        cplex.addEq(cplex.sum(y[i][j], y[j][i]), 1);
                     }
                 }
             }
