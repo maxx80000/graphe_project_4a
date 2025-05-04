@@ -130,34 +130,16 @@ public class Main {
             String instanceName = instanceFile.getName().replace(".txt", "");
             System.out.println("Processing instance: " + instanceName);
             
-            // Identifier les petites instances compatibles avec CPLEX Community Edition
-            boolean isSmallInstance = instanceName.equals("airland1");
-            
-            // Si l'instance est grande, réduire sa taille
-            int maxAircraft = isSmallInstance ? Integer.MAX_VALUE : 10; // Limiter à 10 avions pour les grandes instances
-            
             for (int numRunways : runwayCounts) {
                 System.out.println("  With " + numRunways + " runway(s)");
 
                 try {
                     // Read the instance
-                    ALPInstance instance = InstanceReader.readInstance(instanceFile.getPath(), numRunways, maxAircraft);
-                    
-                    // Si l'instance est trop grande, ajouter un avertissement
-                    if (!isSmallInstance) {
-                        System.out.println("  ⚠️ Instance tronquée à " + maxAircraft + " avions pour respecter les limites de CPLEX Community Edition");
-                    }
+                    ALPInstance instance = InstanceReader.readInstance(instanceFile.getPath(), numRunways);
                     
                     // Create a specific results file for this instance and runway count
                     String resultsFileName = "results/" + instanceName + "_" + numRunways + "_runways.txt";
                     PrintWriter resultsWriter = new PrintWriter(resultsFileName);
-                    
-                    // Si l'instance a été tronquée, l'indiquer dans le fichier de résultats
-                    if (!isSmallInstance) {
-                        resultsWriter.println("⚠️ AVERTISSEMENT: Cette instance a été tronquée à " + maxAircraft + 
-                                             " avions pour respecter les limites de CPLEX Community Edition");
-                        resultsWriter.println("Les résultats ne sont pas représentatifs de l'instance complète.\n");
-                    }
                     
                     // Process with each solver
                     for (ALPSolver solver : solvers) {
@@ -211,7 +193,7 @@ public class Main {
                     "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/airland5.txt",
                     "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/airland6.txt",
                     "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/airland7.txt",
-                    "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/airland8.txt"
+                    "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/airland8.txt",
             };
 
             boolean allSuccessful = true;
