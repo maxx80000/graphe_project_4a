@@ -7,7 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 import alp.analysis.SolutionAnalyzer;
 import alp.io.InstanceReader;
@@ -18,7 +19,6 @@ import alp.solver.Problem1Solver;
 import alp.solver.Problem2Solver;
 import alp.solver.Problem3Solver;
 import alp.visualization.ScheduleVisualizer;
-import alp.visualization.VisualizationManager;
 
 /**
  * Main class for the Aircraft Landing Problem project.
@@ -151,14 +151,18 @@ public class Main {
             }
 
             summaryWriter.close();
-            System.out.println("Traitement terminé ! Les résultats ont été écrits dans le répertoire 'results'.");
+            System.out.println("All done! Results written to the 'results' directory.");
 
-            // Si la visualisation groupée est activée, on affiche toutes les solutions à la
-            // fin
-            if (enableVisualization && allSolutions != null && !allSolutions.isEmpty()) {
-                System.out.println("Lancement de la visualisation groupée des solutions...");
-                VisualizationManager.launchVisualizer(allSolutions);
-            }
+            // Proposer la visualisation d'une solution après le traitement
+            SwingUtilities.invokeLater(() -> {
+                int choice = JOptionPane.showConfirmDialog(null,
+                        "Voulez-vous visualiser une solution?",
+                        "Visualisation", JOptionPane.YES_NO_OPTION);
+
+                if (choice == JOptionPane.YES_OPTION) {
+                    showVisualizationDialog(instancesDir);
+                }
+            });
 
         } catch (IOException e) {
             System.err.println("Error: " + e.getMessage());
@@ -169,42 +173,25 @@ public class Main {
     /**
      * Process all the instance files with different runway counts and solvers.
      */
-    private static void processInstances(File[] instanceFiles, int[] runwayCounts,
-            List<ALPSolver> solvers, PrintWriter summaryWriter) {
+    private static void processInstances(File[] instanceFiles, int[] runwayCounts, List<ALPSolver> solvers,
+            PrintWriter summaryWriter) {
+        // Liste pour stocker les solutions
+        List<ALPSolution> allSolutions = new ArrayList<>();
+
         for (File instanceFile : instanceFiles) {
             String instanceName = instanceFile.getName().replace(".txt", "");
-            System.out.println("Traitement de l'instance: " + instanceName);
-
-            // Identifier les petites instances compatibles avec CPLEX Community Edition
-            boolean isSmallInstance = instanceName.equals("airland1");
-
-            // Si l'instance est grande, réduire sa taille
-            int maxAircraft = isSmallInstance ? Integer.MAX_VALUE : 10; // Limiter à 10 avions pour les grandes
-                                                                        // instances
+            System.out.println("Processing instance: " + instanceName);
 
             for (int numRunways : runwayCounts) {
                 System.out.println("  Avec " + numRunways + " piste(s)");
 
                 try {
                     // Read the instance
-                    ALPInstance instance = InstanceReader.readInstance(instanceFile.getPath(), numRunways, maxAircraft);
-
-                    // Si l'instance est trop grande, ajouter un avertissement
-                    if (!isSmallInstance) {
-                        System.out.println("  ⚠️ Instance tronquée à " + maxAircraft
-                                + " avions pour respecter les limites de CPLEX Community Edition");
-                    }
+                    ALPInstance instance = InstanceReader.readInstance(instanceFile.getPath(), numRunways);
 
                     // Create a specific results file for this instance and runway count
                     String resultsFileName = "results/" + instanceName + "_" + numRunways + "_runways.txt";
                     PrintWriter resultsWriter = new PrintWriter(resultsFileName);
-
-                    // Si l'instance a été tronquée, l'indiquer dans le fichier de résultats
-                    if (!isSmallInstance) {
-                        resultsWriter.println("⚠️ AVERTISSEMENT: Cette instance a été tronquée à " + maxAircraft +
-                                " avions pour respecter les limites de CPLEX Community Edition");
-                        resultsWriter.println("Les résultats ne sont pas représentatifs de l'instance complète.\n");
-                    }
 
                     // Process with each solver
                     for (ALPSolver solver : solvers) {
@@ -214,27 +201,44 @@ public class Main {
                             // Solve the instance
                             ALPSolution solution = solver.solve(instance);
 
+                            // Store solution for later visualization
+                            allSolutions.add(solution);
+
+                            // Write solution to file for persistence
+                            try (PrintWriter solWriter = new PrintWriter(
+                                    "results/" + instanceName + "_" + numRunways + "_" +
+                                            solver.getClass().getSimpleName() + ".sol")) {
+                                solWriter.println("Instance: " + instanceName);
+                                solWriter.println("Runways: " + numRunways);
+                                solWriter.println("Solver: " + solver.getName());
+                                solWriter.println("Objective: " + solution.getObjectiveValue());
+                                solWriter.println("Time: " + solution.getSolveTime() + "s");
+                            }
+
                             // Analyze the solution
                             SolutionAnalyzer.analyzeSolution(solution, resultsWriter);
-
-                            // Store solution for grouped visualization if enabled
-                            if (enableVisualization && allSolutions != null) {
-                                allSolutions.add(solution);
-                            }
-
-                            // Visualize the solution if enabled and individual mode
-                            if (enableVisualization && allSolutions == null) {
-                                System.out.println("      Affichage de la visualisation...");
-                                ScheduleVisualizer.visualizeSchedule(solution);
-                            }
 
                             // Add to summary
                             summaryWriter.println(instanceName + "," + numRunways + "," +
                                     solver.getName() + "," + solution.getObjectiveValue() +
                                     "," + solution.getSolveTime());
 
-                            System.out.println("      Résolu ! Objectif: " + solution.getObjectiveValue() +
-                                    ", Temps: " + solution.getSolveTime() + "s");
+                            System.out.println("      Solved! Objective: " + solution.getObjectiveValue() +
+                                    ", Time: " + solution.getSolveTime() + "s");
+
+                            // Proposer de visualiser cette solution
+                            final ALPSolution finalSolution = solution;
+                            SwingUtilities.invokeLater(() -> {
+                                int choice = JOptionPane.showConfirmDialog(null,
+                                        "Voulez-vous visualiser la solution pour " + instanceName +
+                                                " avec " + numRunways + " piste(s) et " + solver.getName() + "?",
+                                        "Visualisation", JOptionPane.YES_NO_OPTION);
+
+                                if (choice == JOptionPane.YES_OPTION) {
+                                    ScheduleVisualizer.visualizeSchedule(finalSolution);
+                                }
+                            });
+
                         } catch (Exception e) {
                             System.err.println("      Erreur lors de la résolution avec " + solver.getName() + ": "
                                     + e.getMessage());
@@ -246,10 +250,78 @@ public class Main {
 
                     resultsWriter.close();
                 } catch (IOException e) {
-                    System.err
-                            .println("Erreur lors du traitement de l'instance " + instanceName + ": " + e.getMessage());
+                    System.err.println("Error processing instance " + instanceName + ": " + e.getMessage());
                 }
             }
+        }
+    }
+
+    /**
+     * Affiche une boîte de dialogue permettant de choisir une solution à visualiser
+     */
+    private static void showVisualizationDialog(String instancesDir) {
+        try {
+            // Chercher des fichiers de solution
+            File resultsDir = new File("results");
+            File[] solutionFiles = resultsDir.listFiles((dir, name) -> name.endsWith(".sol"));
+
+            if (solutionFiles == null || solutionFiles.length == 0) {
+                JOptionPane.showMessageDialog(null,
+                        "Aucune solution sauvegardée trouvée.",
+                        "Visualisation impossible", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Créer un tableau des noms de solutions
+            String[] solutionNames = new String[solutionFiles.length];
+            for (int i = 0; i < solutionFiles.length; i++) {
+                String fileName = solutionFiles[i].getName();
+                solutionNames[i] = fileName.substring(0, fileName.length() - 4); // Enlever .sol
+            }
+
+            // Montrer un dialogue de sélection
+            String selected = (String) JOptionPane.showInputDialog(null,
+                    "Choisissez une solution à visualiser:",
+                    "Visualiser une solution",
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    solutionNames,
+                    solutionNames[0]);
+
+            if (selected != null) {
+                // Parser le nom sélectionné pour obtenir les paramètres
+                String[] parts = selected.split("_");
+                String instanceName = parts[0];
+                int numRunways = Integer.parseInt(parts[1]);
+                String solverName = parts[2];
+
+                // Déterminer quelle classe de solver utiliser
+                ALPSolver solver;
+                if (solverName.equals("Problem1Solver")) {
+                    solver = new Problem1Solver();
+                } else if (solverName.equals("Problem2Solver")) {
+                    solver = new Problem2Solver();
+                } else {
+                    solver = new Problem3Solver();
+                }
+
+                // Charger l'instance
+                ALPInstance instance = InstanceReader.readInstance(
+                        instancesDir + File.separator + instanceName + ".txt", numRunways);
+
+                // Résoudre à nouveau (puisque nous ne sauvegardons pas le vecteur de solution
+                // complet)
+                ALPSolution solution = solver.solve(instance);
+
+                // Visualiser
+                ScheduleVisualizer.visualizeSchedule(solution);
+            }
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null,
+                    "Erreur lors de la visualisation: " + e.getMessage(),
+                    "Erreur", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
     }
 
@@ -269,7 +341,7 @@ public class Main {
                     "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/airland5.txt",
                     "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/airland6.txt",
                     "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/airland7.txt",
-                    "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/airland8.txt"
+                    "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/airland8.txt",
             };
 
             boolean allSuccessful = true;

@@ -2,318 +2,574 @@ package alp.visualization;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import javax.imageio.ImageIO;
+import java.util.Timer;
 import javax.swing.*;
-import javax.swing.Timer; // Spécifier explicitement javax.swing.Timer pour éviter l'ambiguïté
-import javax.swing.border.EmptyBorder;
-import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.border.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.table.DefaultTableCellRenderer;
 
 import alp.model.ALPInstance;
 import alp.model.ALPSolution;
 import alp.model.AircraftData;
 
 /**
- * Enhanced class to visualize the aircraft landing schedule with interactive
- * features
- * and animations.
+ * Enhanced visualizer for aircraft landing schedule solutions.
+ * Provides a comprehensive GUI with landing simulation and optimization
+ * details.
  */
 public class ScheduleVisualizer {
-    private static final Color BACKGROUND_COLOR = new Color(245, 245, 250);
-    private static final Color GRID_COLOR = new Color(220, 220, 230);
-    private static final Color AXIS_COLOR = new Color(100, 100, 120);
-    private static final Color TEXT_COLOR = new Color(50, 50, 70);
-    private static final Color TITLE_COLOR = new Color(25, 25, 112);
 
-    private static final Color[] RUNWAY_COLORS = {
-            new Color(68, 138, 255), // Blue
-            new Color(246, 139, 30), // Orange
-            new Color(97, 206, 112) // Green
-    };
+    // Constants for visualization
+    private static final Color BACKGROUND_COLOR = new Color(245, 245, 250);
+    private static final Color PANEL_BACKGROUND = new Color(255, 255, 255);
+    private static final Color HEADER_COLOR = new Color(60, 90, 180);
+    private static final Color GRID_COLOR = new Color(230, 230, 240);
+    private static final Color TIME_AXIS_COLOR = new Color(100, 100, 120);
+    private static final Color TIMELINE_COLOR = new Color(200, 80, 80, 180);
 
     private static final Font TITLE_FONT = new Font("Segoe UI", Font.BOLD, 18);
-    private static final Font INFO_FONT = new Font("Segoe UI", Font.PLAIN, 12);
-    private static final Font LABEL_FONT = new Font("Segoe UI", Font.PLAIN, 11);
-    private static final Font AIRCRAFT_FONT = new Font("Segoe UI", Font.BOLD, 10);
+    private static final Font HEADER_FONT = new Font("Segoe UI", Font.BOLD, 14);
+    private static final Font NORMAL_FONT = new Font("Segoe UI", Font.PLAIN, 12);
+    private static final Font SMALL_FONT = new Font("Segoe UI", Font.PLAIN, 10);
 
     /**
      * Displays an enhanced visualization of the aircraft landing schedule.
      */
     public static void visualizeSchedule(ALPSolution solution) {
         try {
-            // Use system look and feel for a more modern appearance
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
-            // Fall back to default look and feel if system L&F not available
-            System.err.println("Could not set system look and feel: " + e.getMessage());
+            e.printStackTrace();
         }
 
-        JFrame frame = new JFrame("Aircraft Landing Schedule - " + solution.getProblemVariant());
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(1200, 700);
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("Aircraft Landing Scheduler - " + solution.getProblemVariant());
+            frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            frame.setSize(1200, 800);
+            frame.setLocationRelativeTo(null);
 
-        // Create tabbed pane for different visualization options
-        JTabbedPane tabbedPane = new JTabbedPane();
+            // Create the main content panel with layout
+            JPanel mainPanel = new JPanel(new BorderLayout(0, 0));
+            mainPanel.setBackground(BACKGROUND_COLOR);
 
-        // Main schedule panel with Gantt chart
-        EnhancedSchedulePanel schedulePanel = new EnhancedSchedulePanel(solution);
-        JPanel ganttPanel = createGanttPanelWithControls(schedulePanel, solution);
-        tabbedPane.addTab("Schedule View", new ImageIcon(), ganttPanel, "Gantt chart of aircraft landing schedule");
+            // Create header panel
+            JPanel headerPanel = createHeaderPanel(solution);
+            mainPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // Animation panel showing aircraft approaching and landing
-        RunwayAnimationPanel animationPanel = new RunwayAnimationPanel(solution);
-        JPanel animationControlPanel = createAnimationControlPanel(animationPanel, solution);
-        tabbedPane.addTab("Runway Animation", new ImageIcon(), animationControlPanel,
-                "Animation of aircraft landing sequence");
+            // Create tabbed pane for different views
+            JTabbedPane tabbedPane = new JTabbedPane();
+            tabbedPane.setFont(HEADER_FONT);
+            tabbedPane.setBackground(PANEL_BACKGROUND);
 
-        // Add the tabbed pane to the frame
-        frame.add(tabbedPane);
+            // Create schedule visualization panel
+            SchedulePanel schedulePanel = new SchedulePanel(solution);
 
-        // Center the frame on screen
-        frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
+            // Create statistics panel
+            JPanel statsPanel = createStatsPanel(solution);
 
-        // Wait for the frame to close to allow the program to continue
-        final CountDownLatch latch = new CountDownLatch(1);
-        frame.addWindowListener(new WindowAdapter() {
+            // Create simulation panel
+            SimulationPanel simulationPanel = new SimulationPanel(solution);
+
+            // Add panels to tabbed pane
+            tabbedPane.addTab("Schedule Timeline", new ImageIcon(), new JScrollPane(schedulePanel),
+                    "Gantt chart visualization of landing schedule");
+            tabbedPane.addTab("Simulation", new ImageIcon(), simulationPanel,
+                    "Animated simulation of aircraft landings");
+            tabbedPane.addTab("Statistics", new ImageIcon(), new JScrollPane(statsPanel),
+                    "Detailed optimization statistics");
+
+            mainPanel.add(tabbedPane, BorderLayout.CENTER);
+
+            // Add control panel at the bottom
+            JPanel controlPanel = createControlPanel(solution, schedulePanel, simulationPanel);
+            mainPanel.add(controlPanel, BorderLayout.SOUTH);
+
+            frame.add(mainPanel);
+            frame.setVisible(true);
+        });
+    }
+
+    /**
+     * Creates the header panel with solution information
+     */
+    private static JPanel createHeaderPanel(ALPSolution solution) {
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+        headerPanel.setBackground(PANEL_BACKGROUND);
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, GRID_COLOR),
+                BorderFactory.createEmptyBorder(15, 20, 15, 20)));
+
+        // Title with problem variant
+        JLabel titleLabel = new JLabel("Aircraft Landing Schedule Optimization");
+        titleLabel.setFont(TITLE_FONT);
+        titleLabel.setForeground(HEADER_COLOR);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Subtitle with instance info
+        JLabel instanceLabel = new JLabel("Instance: " + solution.getInstance().getInstanceName() +
+                " | Problem: " + solution.getProblemVariant());
+        instanceLabel.setFont(HEADER_FONT);
+        instanceLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Result metrics
+        JPanel metricsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
+        metricsPanel.setOpaque(false);
+        metricsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Create metric components
+        addMetricComponent(metricsPanel, "Aircraft", solution.getInstance().getNumAircraft() + "");
+        addMetricComponent(metricsPanel, "Runways", solution.getInstance().getNumRunways() + "");
+        addMetricComponent(metricsPanel, "Objective Value", String.format("%.2f", solution.getObjectiveValue()));
+        addMetricComponent(metricsPanel, "Solve Time", String.format("%.2f sec", solution.getSolveTime()));
+
+        headerPanel.add(titleLabel);
+        headerPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        headerPanel.add(instanceLabel);
+        headerPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        headerPanel.add(metricsPanel);
+
+        return headerPanel;
+    }
+
+    /**
+     * Adds a metric component to the metrics panel
+     */
+    private static void addMetricComponent(JPanel panel, String label, String value) {
+        JPanel metricPanel = new JPanel();
+        metricPanel.setLayout(new BoxLayout(metricPanel, BoxLayout.Y_AXIS));
+        metricPanel.setOpaque(false);
+
+        JLabel metricLabel = new JLabel(label);
+        metricLabel.setFont(SMALL_FONT);
+        metricLabel.setForeground(Color.DARK_GRAY);
+
+        JLabel metricValue = new JLabel(value);
+        metricValue.setFont(HEADER_FONT);
+
+        metricPanel.add(metricLabel);
+        metricPanel.add(metricValue);
+
+        panel.add(metricPanel);
+    }
+
+    /**
+     * Creates the control panel with timeline slider
+     */
+    private static JPanel createControlPanel(ALPSolution solution, SchedulePanel schedulePanel,
+            SimulationPanel simulationPanel) {
+        JPanel controlPanel = new JPanel(new BorderLayout());
+        controlPanel.setBackground(PANEL_BACKGROUND);
+        controlPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, GRID_COLOR),
+                BorderFactory.createEmptyBorder(10, 20, 10, 20)));
+
+        // Find the latest landing time for scaling
+        int maxLandingTime = 0;
+        for (int i = 0; i < solution.getInstance().getNumAircraft(); i++) {
+            int landingTime = solution.getLandingTime(i);
+            if (landingTime > maxLandingTime) {
+                maxLandingTime = landingTime;
+            }
+        }
+
+        // Create time slider
+        JLabel sliderLabel = new JLabel("Current Time: 0");
+        sliderLabel.setFont(NORMAL_FONT);
+
+        JSlider timeSlider = new JSlider(0, maxLandingTime, 0);
+        timeSlider.setBackground(PANEL_BACKGROUND);
+        timeSlider.setMajorTickSpacing(maxLandingTime / 10);
+        timeSlider.setMinorTickSpacing(maxLandingTime / 50);
+        timeSlider.setPaintTicks(true);
+        timeSlider.setPaintLabels(true);
+        timeSlider.setFont(SMALL_FONT);
+
+        timeSlider.addChangeListener(new ChangeListener() {
             @Override
-            public void windowClosed(WindowEvent e) {
-                latch.countDown();
+            public void stateChanged(ChangeEvent e) {
+                int time = timeSlider.getValue();
+                sliderLabel.setText("Current Time: " + time);
+                schedulePanel.setCurrentTime(time);
+                simulationPanel.setCurrentTime(time);
             }
         });
 
-        try {
-            latch.await();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    /**
-     * Displays multiple visualizations in a single window with tabs for better
-     * organization.
-     */
-    public static void visualizeMultipleSolutions(List<ALPSolution> solutions) {
-        VisualizationManager.launchVisualizer(solutions);
-    }
-
-    /**
-     * Creates a panel with the Gantt chart and control elements
-     */
-    public static JPanel createGanttPanelWithControls(EnhancedSchedulePanel schedulePanel, ALPSolution solution) {
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(BACKGROUND_COLOR);
-
-        // Add the schedule panel to a scroll pane
-        JScrollPane scrollPane = new JScrollPane(schedulePanel);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-
-        // Create a toolbar with controls
-        JToolBar toolBar = new JToolBar();
-        toolBar.setFloatable(false);
-        toolBar.setBackground(BACKGROUND_COLOR);
-        toolBar.setBorder(new EmptyBorder(5, 10, 5, 10));
-
-        // Zoom controls
-        JButton zoomInButton = new JButton("Zoom In");
-        JButton zoomOutButton = new JButton("Zoom Out");
-        JButton resetZoomButton = new JButton("Reset Zoom");
-
-        zoomInButton.addActionListener(e -> schedulePanel.zoomIn());
-        zoomOutButton.addActionListener(e -> schedulePanel.zoomOut());
-        resetZoomButton.addActionListener(e -> schedulePanel.resetZoom());
-
-        toolBar.add(zoomInButton);
-        toolBar.add(zoomOutButton);
-        toolBar.add(resetZoomButton);
-        toolBar.addSeparator();
-
-        // Save image button
-        JButton saveButton = new JButton("Save as Image");
-        saveButton.addActionListener(e -> {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("Save Schedule as PNG");
-            fileChooser.setFileFilter(new FileNameExtensionFilter("PNG Images", "png"));
-
-            // Set default filename with timestamp
-            String dateTime = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            String defaultFilename = solution.getInstance().getInstanceName() + "_" +
-                    solution.getProblemVariant() + "_" + dateTime + ".png";
-            fileChooser.setSelectedFile(new File(defaultFilename));
-
-            if (fileChooser.showSaveDialog(mainPanel) == JFileChooser.APPROVE_OPTION) {
-                File file = fileChooser.getSelectedFile();
-                // Ensure file has .png extension
-                if (!file.getName().toLowerCase().endsWith(".png")) {
-                    file = new File(file.getAbsolutePath() + ".png");
-                }
-
-                // Create image of the current view
-                BufferedImage image = new BufferedImage(
-                        schedulePanel.getWidth(), schedulePanel.getHeight(), BufferedImage.TYPE_INT_ARGB);
-                Graphics2D g2d = image.createGraphics();
-                schedulePanel.print(g2d);
-                g2d.dispose();
-
-                // Save the image
-                try {
-                    ImageIO.write(image, "png", file);
-                    JOptionPane.showMessageDialog(mainPanel,
-                            "Image saved to: " + file.getAbsolutePath(),
-                            "Save Successful", JOptionPane.INFORMATION_MESSAGE);
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(mainPanel,
-                            "Error saving image: " + ex.getMessage(),
-                            "Save Failed", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        });
-
-        toolBar.add(saveButton);
-
-        // Information panel (above the schedule)
-        JPanel infoPanel = createInfoPanel(solution);
-
-        // Add everything to the main panel
-        mainPanel.add(toolBar, BorderLayout.NORTH);
-        mainPanel.add(infoPanel, BorderLayout.SOUTH);
-        mainPanel.add(scrollPane, BorderLayout.CENTER);
-
-        return mainPanel;
-    }
-
-    /**
-     * Creates an information panel with solution details
-     */
-    public static JPanel createInfoPanel(ALPSolution solution) {
-        JPanel infoPanel = new JPanel();
-        infoPanel.setBackground(new Color(240, 240, 245));
-        infoPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(200, 200, 210)),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
-
-        ALPInstance instance = solution.getInstance();
-        int numAircraft = instance.getNumAircraft();
-        int numRunways = instance.getNumRunways();
-
-        // Create info text
-        JLabel instanceLabel = new JLabel("Instance: " + instance.getInstanceName());
-        JLabel aircraftLabel = new JLabel("Aircraft: " + numAircraft);
-        JLabel runwaysLabel = new JLabel("Runways: " + numRunways);
-        JLabel objectiveLabel = new JLabel(String.format("Objective Value: %.2f", solution.getObjectiveValue()));
-        JLabel timeLabel = new JLabel(String.format("Solve Time: %.2f seconds", solution.getSolveTime()));
-
-        // Style labels
-        for (JLabel label : new JLabel[] { instanceLabel, aircraftLabel, runwaysLabel, objectiveLabel, timeLabel }) {
-            label.setFont(INFO_FONT);
-            label.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
-        }
-
-        infoPanel.add(instanceLabel);
-        infoPanel.add(aircraftLabel);
-        infoPanel.add(runwaysLabel);
-        infoPanel.add(objectiveLabel);
-        infoPanel.add(timeLabel);
-
-        return infoPanel;
-    }
-
-    /**
-     * Creates the animation panel with controls
-     */
-    public static JPanel createAnimationControlPanel(RunwayAnimationPanel animationPanel, ALPSolution solution) {
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(BACKGROUND_COLOR);
-
-        // Create animation controls
-        JPanel controlPanel = new JPanel();
-        controlPanel.setBackground(BACKGROUND_COLOR);
-        controlPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        // Create playback control buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.setOpaque(false);
 
         JButton playButton = new JButton("Play");
         JButton pauseButton = new JButton("Pause");
         JButton resetButton = new JButton("Reset");
-        JSlider speedSlider = new JSlider(JSlider.HORIZONTAL, 1, 10, 5);
 
-        speedSlider.setMajorTickSpacing(1);
-        speedSlider.setPaintTicks(true);
-        speedSlider.setPaintLabels(true);
-        speedSlider.setBackground(BACKGROUND_COLOR);
+        // Animation timer
+        final Timer[] timer = { null };
+        final int[] animationSpeed = { 1 }; // seconds per frame
 
-        JLabel speedLabel = new JLabel("Animation Speed:");
-        speedLabel.setFont(INFO_FONT);
+        playButton.addActionListener(e -> {
+            if (timer[0] != null) {
+                timer[0].cancel();
+            }
 
-        // Add action listeners
-        playButton.addActionListener(e -> animationPanel.startAnimation());
-        pauseButton.addActionListener(e -> animationPanel.pauseAnimation());
-        resetButton.addActionListener(e -> animationPanel.resetAnimation());
+            timer[0] = new Timer();
+            timer[0].scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    if (timeSlider.getValue() < timeSlider.getMaximum()) {
+                        SwingUtilities.invokeLater(() -> {
+                            timeSlider.setValue(timeSlider.getValue() + 1);
+                        });
+                    } else {
+                        timer[0].cancel();
+                        timer[0] = null;
+                    }
+                }
+            }, 0, 100 * animationSpeed[0]);
+        });
 
-        speedSlider.addChangeListener(e -> animationPanel.setAnimationSpeed(speedSlider.getValue()));
+        pauseButton.addActionListener(e -> {
+            if (timer[0] != null) {
+                timer[0].cancel();
+                timer[0] = null;
+            }
+        });
 
-        // Add controls to panel
-        controlPanel.add(playButton);
-        controlPanel.add(pauseButton);
-        controlPanel.add(resetButton);
-        controlPanel.add(speedLabel);
-        controlPanel.add(speedSlider);
+        resetButton.addActionListener(e -> {
+            if (timer[0] != null) {
+                timer[0].cancel();
+                timer[0] = null;
+            }
+            timeSlider.setValue(0);
+        });
 
-        // Create info panel
-        JPanel infoPanel = createInfoPanel(solution);
+        // Speed control
+        JLabel speedLabel = new JLabel("Speed: ");
+        JComboBox<String> speedCombo = new JComboBox<>(new String[] { "0.5x", "1x", "2x", "5x", "10x" });
+        speedCombo.setSelectedIndex(1); // Default 1x
 
-        // Add everything to main panel
-        mainPanel.add(controlPanel, BorderLayout.NORTH);
-        mainPanel.add(animationPanel, BorderLayout.CENTER);
-        mainPanel.add(infoPanel, BorderLayout.SOUTH);
+        speedCombo.addActionListener(e -> {
+            String selected = (String) speedCombo.getSelectedItem();
+            switch (selected) {
+                case "0.5x":
+                    animationSpeed[0] = 2;
+                    break;
+                case "1x":
+                    animationSpeed[0] = 1;
+                    break;
+                case "2x":
+                    animationSpeed[0] = 1;
+                    break;
+                case "5x":
+                    animationSpeed[0] = 1;
+                    break;
+                case "10x":
+                    animationSpeed[0] = 1;
+                    break;
+            }
+        });
 
-        return mainPanel;
+        buttonPanel.add(playButton);
+        buttonPanel.add(pauseButton);
+        buttonPanel.add(resetButton);
+        buttonPanel.add(Box.createRigidArea(new Dimension(20, 0)));
+        buttonPanel.add(speedLabel);
+        buttonPanel.add(speedCombo);
+
+        JPanel sliderPanel = new JPanel(new BorderLayout());
+        sliderPanel.setOpaque(false);
+        sliderPanel.add(sliderLabel, BorderLayout.WEST);
+        sliderPanel.add(timeSlider, BorderLayout.CENTER);
+
+        controlPanel.add(sliderPanel, BorderLayout.CENTER);
+        controlPanel.add(buttonPanel, BorderLayout.EAST);
+
+        return controlPanel;
     }
 
     /**
-     * Enhanced panel for displaying the schedule visualization.
+     * Creates the statistics panel with detailed solution information
      */
-    public static class EnhancedSchedulePanel extends JPanel
-            implements MouseWheelListener, MouseMotionListener, MouseListener {
-        private ALPSolution solution;
-        private int margin = 60;
-        private int barHeight = 40;
-        private int spacing = 20;
-        private double timeScale = 5.0;
-        private double zoomFactor = 1.0;
-        private Point2D dragStart = null;
-        private int translateX = 0;
-        private int translateY = 0;
-        private String tooltip = null;
-        private Point tooltipPoint = null;
+    private static JPanel createStatsPanel(ALPSolution solution) {
+        ALPInstance instance = solution.getInstance();
+        int[] landingTimes = solution.getLandingTimes();
+        int[] runwayAssignments = solution.getRunwayAssignments();
 
-        public EnhancedSchedulePanel(ALPSolution solution) {
-            this.solution = solution;
-            setBackground(BACKGROUND_COLOR);
-            setPreferredSize(new Dimension(2000, calculateHeight()));
+        JPanel statsPanel = new JPanel();
+        statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.Y_AXIS));
+        statsPanel.setBackground(PANEL_BACKGROUND);
+        statsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-            // Add interaction listeners
-            addMouseWheelListener(this);
-            addMouseMotionListener(this);
-            addMouseListener(this);
+        // Add summary panel
+        JPanel summaryPanel = new JPanel(new GridLayout(0, 2, 10, 10));
+        summaryPanel.setBackground(PANEL_BACKGROUND);
+        summaryPanel.setBorder(createSectionBorder("Optimization Summary"));
+        summaryPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-            ToolTipManager.sharedInstance().registerComponent(this);
-            ToolTipManager.sharedInstance().setInitialDelay(0);
+        // Problem-specific statistics
+        String problemType = solution.getProblemVariant();
+        if (problemType.contains("Problem 1")) {
+            // Weighted delay stats
+            double totalDelay = 0;
+            int earlyAircraft = 0;
+            int lateAircraft = 0;
+
+            for (int i = 0; i < instance.getNumAircraft(); i++) {
+                AircraftData aircraft = instance.getAircraft().get(i);
+                int targetTime = aircraft.getTargetLandingTime();
+                int actualTime = landingTimes[i];
+
+                if (actualTime < targetTime) {
+                    earlyAircraft++;
+                    totalDelay += aircraft.getEarlyPenalty() * (targetTime - actualTime);
+                } else if (actualTime > targetTime) {
+                    lateAircraft++;
+                    totalDelay += aircraft.getLatePenalty() * (actualTime - targetTime);
+                }
+            }
+
+            addStatField(summaryPanel, "Total Weighted Delay", String.format("%.2f", totalDelay));
+            addStatField(summaryPanel, "Early Aircraft", String.valueOf(earlyAircraft));
+            addStatField(summaryPanel, "Late Aircraft", String.valueOf(lateAircraft));
+            addStatField(summaryPanel, "On-Time Aircraft",
+                    String.valueOf(instance.getNumAircraft() - earlyAircraft - lateAircraft));
+
+        } else if (problemType.contains("Problem 2")) {
+            // Makespan stats
+            int makespan = 0;
+            for (int time : landingTimes) {
+                makespan = Math.max(makespan, time);
+            }
+
+            addStatField(summaryPanel, "Makespan (Last Landing)", String.valueOf(makespan));
+
+            // Runway utilization
+            Map<Integer, Integer> runwayLandings = new HashMap<>();
+            for (int runway : runwayAssignments) {
+                runwayLandings.put(runway, runwayLandings.getOrDefault(runway, 0) + 1);
+            }
+
+            for (int r = 0; r < instance.getNumRunways(); r++) {
+                addStatField(summaryPanel, "Runway " + (r + 1) + " Landings",
+                        String.valueOf(runwayLandings.getOrDefault(r, 0)));
+            }
+
+        } else if (problemType.contains("Problem 3")) {
+            // Total lateness stats
+            double totalLateness = 0;
+            int lateAircraft = 0;
+
+            for (int i = 0; i < instance.getNumAircraft(); i++) {
+                AircraftData aircraft = instance.getAircraft().get(i);
+                int targetTime = aircraft.getTargetLandingTime();
+                int transferTime = aircraft.getTransferTime(runwayAssignments[i]);
+                int arrivalTime = landingTimes[i] + transferTime;
+
+                int lateness = Math.max(0, arrivalTime - targetTime);
+                totalLateness += lateness;
+
+                if (lateness > 0)
+                    lateAircraft++;
+            }
+
+            addStatField(summaryPanel, "Total Lateness", String.format("%.2f", totalLateness));
+            addStatField(summaryPanel, "Late Aircraft", String.valueOf(lateAircraft));
+            addStatField(summaryPanel, "On-Time Aircraft", String.valueOf(instance.getNumAircraft() - lateAircraft));
+
+            // Average transfer time
+            double avgTransferTime = 0;
+            for (int i = 0; i < instance.getNumAircraft(); i++) {
+                AircraftData aircraft = instance.getAircraft().get(i);
+                avgTransferTime += aircraft.getTransferTime(runwayAssignments[i]);
+            }
+            avgTransferTime /= instance.getNumAircraft();
+
+            addStatField(summaryPanel, "Avg Transfer Time", String.format("%.2f", avgTransferTime));
         }
 
-        private int calculateHeight() {
-            ALPInstance instance = solution.getInstance();
-            int numRunways = instance.getNumRunways();
-            return margin * 2 + numRunways * (barHeight + spacing * 2) + 100; // Extra space for legend
+        // General statistics
+        addStatField(summaryPanel, "Solve Time", String.format("%.2f seconds", solution.getSolveTime()));
+
+        // Add detailed aircraft data table
+        JPanel tablePanel = new JPanel(new BorderLayout());
+        tablePanel.setBackground(PANEL_BACKGROUND);
+        tablePanel.setBorder(createSectionBorder("Aircraft Landing Details"));
+        tablePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Create table model
+        String[] columnNames;
+        if (problemType.contains("Problem 3")) {
+            columnNames = new String[] {
+                    "Aircraft", "Runway", "Landing Time", "Target Time", "Transfer Time",
+                    "Arrival Time", "Lateness", "Time Window"
+            };
+        } else {
+            columnNames = new String[] {
+                    "Aircraft", "Runway", "Landing Time", "Target Time",
+                    "Deviation", "Penalty", "Time Window"
+            };
+        }
+
+        Object[][] data = new Object[instance.getNumAircraft()][columnNames.length];
+
+        // Populate table data
+        for (int i = 0; i < instance.getNumAircraft(); i++) {
+            AircraftData aircraft = instance.getAircraft().get(i);
+            int landingTime = landingTimes[i];
+            int runway = runwayAssignments[i];
+            int targetTime = aircraft.getTargetLandingTime();
+            String timeWindow = aircraft.getEarliestLandingTime() + " - " + aircraft.getLatestLandingTime();
+
+            if (problemType.contains("Problem 3")) {
+                int transferTime = aircraft.getTransferTime(runway);
+                int arrivalTime = landingTime + transferTime;
+                int lateness = Math.max(0, arrivalTime - targetTime);
+
+                data[i] = new Object[] {
+                        "A" + (i + 1), runway + 1, landingTime, targetTime,
+                        transferTime, arrivalTime, lateness, timeWindow
+                };
+            } else {
+                int deviation = landingTime - targetTime;
+                double penalty = 0;
+
+                if (deviation < 0) {
+                    penalty = aircraft.getEarlyPenalty() * Math.abs(deviation);
+                } else if (deviation > 0) {
+                    penalty = aircraft.getLatePenalty() * deviation;
+                }
+
+                data[i] = new Object[] {
+                        "A" + (i + 1), runway + 1, landingTime, targetTime,
+                        deviation, String.format("%.2f", penalty), timeWindow
+                };
+            }
+        }
+
+        // Create and configure table
+        JTable table = new JTable(data, columnNames);
+        table.setFont(NORMAL_FONT);
+        table.setRowHeight(25);
+        table.getTableHeader().setFont(HEADER_FONT);
+        table.setAutoCreateRowSorter(true);
+        table.setFillsViewportHeight(true);
+
+        // Cell renderer for coloring early/late
+        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus,
+                    int row, int column) {
+                Component c = super.getTableCellRendererComponent(
+                        table, value, isSelected, hasFocus, row, column);
+
+                int modelRow = table.convertRowIndexToModel(row);
+
+                if (!isSelected) {
+                    int deviation = 0;
+                    if (columnNames[column].equals("Deviation")) {
+                        deviation = (int) table.getModel().getValueAt(modelRow, 4);
+                    } else if (columnNames[column].equals("Lateness")) {
+                        deviation = (int) table.getModel().getValueAt(modelRow, 6);
+                    }
+
+                    if (deviation < 0) {
+                        c.setBackground(new Color(230, 255, 230));
+                    } else if (deviation > 0) {
+                        c.setBackground(new Color(255, 230, 230));
+                    } else {
+                        c.setBackground(Color.WHITE);
+                    }
+                }
+
+                return c;
+            }
+        });
+
+        JScrollPane tableScrollPane = new JScrollPane(table);
+        tableScrollPane.setBorder(BorderFactory.createEmptyBorder());
+
+        tablePanel.add(tableScrollPane, BorderLayout.CENTER);
+
+        // Add both panels to statistics panel
+        statsPanel.add(summaryPanel);
+        statsPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+        statsPanel.add(tablePanel);
+
+        return statsPanel;
+    }
+
+    /**
+     * Helper to add a field to the statistics panel
+     */
+    private static void addStatField(JPanel panel, String label, String value) {
+        JLabel lblField = new JLabel(label + ":");
+        lblField.setFont(NORMAL_FONT);
+        lblField.setForeground(Color.DARK_GRAY);
+
+        JLabel lblValue = new JLabel(value);
+        lblValue.setFont(NORMAL_FONT.deriveFont(Font.BOLD));
+
+        panel.add(lblField);
+        panel.add(lblValue);
+    }
+
+    /**
+     * Creates a titled border for sections
+     */
+    private static Border createSectionBorder(String title) {
+        return BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder(
+                        BorderFactory.createLineBorder(GRID_COLOR),
+                        title,
+                        TitledBorder.LEFT,
+                        TitledBorder.TOP,
+                        HEADER_FONT,
+                        HEADER_COLOR),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    }
+
+    /**
+     * Panel for displaying the enhanced schedule visualization.
+     */
+    private static class SchedulePanel extends JPanel {
+        private ALPSolution solution;
+        private int currentTime = 0;
+        private int margin = 60;
+        private int barHeight = 35;
+        private int spacing = 15;
+        private int timeScale = 5;
+        private int padding = 20;
+
+        public SchedulePanel(ALPSolution solution) {
+            this.solution = solution;
+            setBackground(PANEL_BACKGROUND);
+
+            // Make the panel scrollable with proper sizing
+            int numRunways = solution.getInstance().getNumRunways();
+            int maxLandingTime = findMaxLandingTime();
+
+            int preferredWidth = margin + maxLandingTime * timeScale + 100;
+            int preferredHeight = margin + numRunways * (barHeight + spacing) + margin;
+
+            setPreferredSize(new Dimension(preferredWidth, preferredHeight));
+        }
+
+        public void setCurrentTime(int time) {
+            this.currentTime = time;
+            repaint();
+        }
+
+        private int findMaxLandingTime() {
+            int max = 0;
+            for (int i = 0; i < solution.getInstance().getNumAircraft(); i++) {
+                max = Math.max(max, solution.getLandingTime(i));
+            }
+            return max;
         }
 
         @Override
@@ -323,540 +579,245 @@ public class ScheduleVisualizer {
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-            // Save the original transform
-            AffineTransform originalTransform = g2d.getTransform();
-
-            // Apply translation for panning
-            g2d.translate(translateX, translateY);
-
-            // Apply zoom
-            double effectiveTimeScale = timeScale * zoomFactor;
-
             ALPInstance instance = solution.getInstance();
             int numRunways = instance.getNumRunways();
             int numAircraft = instance.getNumAircraft();
+            int maxLandingTime = findMaxLandingTime();
 
-            // Find the latest landing time for scaling
-            int maxLandingTime = 0;
-            for (int i = 0; i < numAircraft; i++) {
-                int landingTime = solution.getLandingTime(i);
-                if (landingTime > maxLandingTime) {
-                    maxLandingTime = landingTime;
-                }
-            }
-
-            // Draw title and info
-            g2d.setFont(TITLE_FONT);
-            g2d.setColor(TITLE_COLOR);
-            g2d.drawString("Aircraft Landing Schedule - " + solution.getProblemVariant(),
-                    margin, 30);
-
-            // Draw time axis with grid
-            drawTimeAxis(g2d, maxLandingTime, effectiveTimeScale);
-
-            // Draw runway lanes with backgrounds
-            drawRunwayLanes(g2d, numRunways, maxLandingTime, effectiveTimeScale);
-
-            // Prepare colors for each aircraft
-            Map<Integer, Color> aircraftColors = generateAircraftColors(numAircraft);
-
-            // Draw aircraft landings
-            drawAircraftLandings(g2d, numAircraft, effectiveTimeScale, aircraftColors);
-
-            // Draw legend
-            drawLegend(g2d, aircraftColors);
-
-            // Restore original transform
-            g2d.setTransform(originalTransform);
-
-            // Draw tooltip if active
-            if (tooltip != null && tooltipPoint != null) {
-                drawTooltip(g2d, tooltip, tooltipPoint);
-            }
-        }
-
-        private void drawTimeAxis(Graphics2D g2d, int maxLandingTime, double effectiveTimeScale) {
-            int axisY = getHeight() - margin;
-
-            // Draw main axis line
-            g2d.setColor(AXIS_COLOR);
-            g2d.setStroke(new BasicStroke(2));
-            g2d.drawLine(margin, axisY, margin + (int) (maxLandingTime * effectiveTimeScale), axisY);
-
-            // Calculate appropriate tick interval based on zoom level
-            int tickInterval = calculateTickInterval(maxLandingTime, effectiveTimeScale);
-
-            // Draw time ticks, grid lines and labels
-            g2d.setFont(LABEL_FONT);
-            for (int t = 0; t <= maxLandingTime; t += tickInterval) {
-                int x = margin + (int) (t * effectiveTimeScale);
-
-                // Vertical grid line
+            // Draw grid background
+            int totalHeight = margin + numRunways * (barHeight + spacing);
+            for (int i = 0; i < numRunways; i++) {
+                int y = margin + i * (barHeight + spacing);
                 g2d.setColor(GRID_COLOR);
-                g2d.setStroke(new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER,
-                        10.0f, new float[] { 5.0f }, 0.0f));
-                g2d.drawLine(x, margin, x, axisY);
+                g2d.fillRect(margin, y, getWidth() - margin * 2, barHeight);
+            }
 
-                // Tick mark
-                g2d.setColor(AXIS_COLOR);
-                g2d.setStroke(new BasicStroke(1));
-                g2d.drawLine(x, axisY, x, axisY + 5);
+            // Draw vertical grid lines
+            g2d.setColor(GRID_COLOR);
+            int tickInterval = Math.max(1, maxLandingTime / 20); // Aim for roughly 20 ticks
+            for (int t = 0; t <= maxLandingTime; t += tickInterval) {
+                int x = margin + t * timeScale;
+                g2d.drawLine(x, margin - padding / 2, x, totalHeight);
+            }
 
-                // Time label
+            // Draw time axis
+            g2d.setColor(TIME_AXIS_COLOR);
+            g2d.drawLine(margin, totalHeight, margin + maxLandingTime * timeScale, totalHeight);
+
+            // Draw time ticks and labels
+            g2d.setFont(SMALL_FONT);
+            for (int t = 0; t <= maxLandingTime; t += tickInterval) {
+                int x = margin + t * timeScale;
+                g2d.drawLine(x, totalHeight, x, totalHeight + 5);
                 String timeLabel = String.valueOf(t);
                 FontMetrics fm = g2d.getFontMetrics();
                 int labelWidth = fm.stringWidth(timeLabel);
-                g2d.setColor(TEXT_COLOR);
-                g2d.drawString(timeLabel, x - labelWidth / 2, axisY + 20);
+                g2d.drawString(timeLabel, x - labelWidth / 2, totalHeight + 18);
             }
-        }
 
-        private int calculateTickInterval(int maxTime, double scale) {
-            int targetTickCount = 20; // Aim for approximately this many ticks
-
-            int interval = Math.max(1, maxTime / targetTickCount);
-
-            // Round to nice numbers (1, 2, 5, 10, 20, 50, etc.)
-            int magnitude = (int) Math.floor(Math.log10(interval));
-            int normalized = (int) (interval / Math.pow(10, magnitude));
-
-            if (normalized <= 1)
-                normalized = 1;
-            else if (normalized <= 2)
-                normalized = 2;
-            else if (normalized <= 5)
-                normalized = 5;
-            else
-                normalized = 10;
-
-            return normalized * (int) Math.pow(10, magnitude);
-        }
-
-        private void drawRunwayLanes(Graphics2D g2d, int numRunways, int maxLandingTime, double effectiveTimeScale) {
+            // Draw runway labels
+            g2d.setFont(NORMAL_FONT);
             for (int r = 0; r < numRunways; r++) {
-                int y = margin + r * (barHeight + spacing * 2) + spacing;
-                int laneWidth = (int) (maxLandingTime * effectiveTimeScale);
-
-                // Lane background
-                Color runwayColor = RUNWAY_COLORS[r % RUNWAY_COLORS.length];
-                Color laneBackground = new Color(runwayColor.getRed(), runwayColor.getGreen(),
-                        runwayColor.getBlue(), 40); // Semi-transparent
-                g2d.setColor(laneBackground);
-                g2d.fillRoundRect(margin, y, laneWidth, barHeight, 10, 10);
-
-                // Lane border
-                g2d.setColor(runwayColor);
-                g2d.setStroke(new BasicStroke(2));
-                g2d.drawRoundRect(margin, y, laneWidth, barHeight, 10, 10);
-
-                // Runway label
-                g2d.setFont(new Font("Segoe UI", Font.BOLD, 12));
-                g2d.setColor(TITLE_COLOR);
-                g2d.drawString("Runway " + (r + 1), margin - 55, y + barHeight / 2 + 5);
+                int y = margin + r * (barHeight + spacing) + barHeight / 2;
+                g2d.setColor(HEADER_COLOR);
+                g2d.drawString("Runway " + (r + 1), 5, y + 5);
             }
-        }
 
-        private Map<Integer, Color> generateAircraftColors(int numAircraft) {
-            Map<Integer, Color> colors = new HashMap<>();
-
+            // Prepare colors for each aircraft
+            List<Color> colors = new ArrayList<>();
             for (int i = 0; i < numAircraft; i++) {
-                // Generate distinct colors using HSB color model
-                float hue = i * (1.0f / numAircraft);
-                colors.put(i, Color.getHSBColor(hue, 0.8f, 0.9f));
+                int hue = (i * 137) % 360; // Golden ratio creates good color distribution
+                colors.add(Color.getHSBColor(hue / 360.0f, 0.7f, 0.9f));
             }
 
-            return colors;
-        }
+            // Draw aircraft time windows as background bars
+            for (int i = 0; i < numAircraft; i++) {
+                int runway = solution.getRunwayAssignment(i);
+                AircraftData aircraft = instance.getAircraft().get(i);
 
-        private void drawAircraftLandings(Graphics2D g2d, int numAircraft, double effectiveTimeScale,
-                Map<Integer, Color> aircraftColors) {
-            ALPInstance instance = solution.getInstance();
+                int earliestTime = aircraft.getEarliestLandingTime();
+                int latestTime = aircraft.getLatestLandingTime();
+                int targetTime = aircraft.getTargetLandingTime();
 
+                int x1 = margin + earliestTime * timeScale;
+                int x2 = margin + latestTime * timeScale;
+                int y = margin + runway * (barHeight + spacing);
+
+                // Draw time window
+                g2d.setColor(new Color(colors.get(i).getRed(), colors.get(i).getGreen(), colors.get(i).getBlue(), 40));
+                g2d.fillRect(x1, y, x2 - x1, barHeight);
+
+                // Draw target time line
+                int targetX = margin + targetTime * timeScale;
+                g2d.setColor(new Color(colors.get(i).getRed(), colors.get(i).getGreen(), colors.get(i).getBlue(), 80));
+                g2d.drawLine(targetX, y, targetX, y + barHeight);
+            }
+
+            // Draw aircraft landings
             for (int i = 0; i < numAircraft; i++) {
                 int landingTime = solution.getLandingTime(i);
                 int runway = solution.getRunwayAssignment(i);
                 AircraftData aircraft = instance.getAircraft().get(i);
 
-                int x = margin + (int) (landingTime * effectiveTimeScale);
-                int y = margin + runway * (barHeight + spacing * 2) + spacing;
+                int x = margin + landingTime * timeScale;
+                int y = margin + runway * (barHeight + spacing);
 
-                // Aircraft rectangle at landing point
-                Color aircraftColor = aircraftColors.get(i);
+                Color aircraftColor = colors.get(i);
 
-                // Draw aircraft icon
-                drawAircraftIcon(g2d, x, y + barHeight / 2, aircraftColor, 15, i + 1);
+                // Highlight if landing matches current time
+                if (Math.abs(landingTime - currentTime) <= 1) {
+                    // Draw highlighted aircraft
+                    g2d.setColor(aircraftColor.brighter());
+                    g2d.fillOval(x - 15, y - 5, barHeight + 10, barHeight + 10);
+                    g2d.setColor(Color.WHITE);
+                    g2d.fillOval(x - 10, y, barHeight, barHeight);
+                    g2d.setColor(aircraftColor);
+                    g2d.fillOval(x - 8, y + 2, barHeight - 4, barHeight - 4);
 
-                // Draw time window and target lines
-                drawAircraftTimeWindows(g2d, aircraft, effectiveTimeScale, y, barHeight);
+                    // Draw info tooltip
+                    String infoText = "A" + (i + 1) + " | Time: " + landingTime + " | Target: "
+                            + aircraft.getTargetLandingTime();
+                    drawTooltip(g2d, infoText, x, y - 20);
+                } else {
+                    // Draw normal aircraft
+                    g2d.setColor(aircraftColor);
+                    g2d.fillOval(x - 10, y + 2, barHeight - 4, barHeight - 4);
+                }
+
+                // Draw aircraft ID
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(SMALL_FONT);
+                String aircraftId = "A" + (i + 1);
+                FontMetrics fm = g2d.getFontMetrics();
+                int textWidth = fm.stringWidth(aircraftId);
+                int textHeight = fm.getHeight();
+                g2d.drawString(aircraftId, x - textWidth / 2, y + barHeight / 2 + textHeight / 4);
             }
+
+            // Draw current time indicator
+            int timeX = margin + currentTime * timeScale;
+            g2d.setColor(TIMELINE_COLOR);
+            g2d.setStroke(new BasicStroke(2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND,
+                    0, new float[] { 8, 4 }, 0));
+            g2d.drawLine(timeX, margin - padding, timeX, totalHeight);
+            g2d.setStroke(new BasicStroke(1f));
+
+            // Display current time
+            g2d.setFont(HEADER_FONT);
+            g2d.setColor(TIMELINE_COLOR);
+            g2d.drawString("t = " + currentTime, timeX + 5, margin - padding / 2);
         }
 
-        private void drawAircraftIcon(Graphics2D g2d, int x, int y, Color color, int size, int id) {
-            // Draw a small airplane shape
-            int[] xPoints = { x, x - size, x - size / 2, x - size / 2, x, x + size / 2, x + size / 2, x + size };
-            int[] yPoints = { y - size / 3, y, y, y + size / 2, y + size / 4, y + size / 2, y, y };
+        private void drawTooltip(Graphics2D g2d, String text, int x, int y) {
+            FontMetrics fm = g2d.getFontMetrics(NORMAL_FONT);
+            int textWidth = fm.stringWidth(text);
+            int textHeight = fm.getHeight();
 
-            g2d.setColor(color);
-            g2d.fillPolygon(xPoints, yPoints, xPoints.length);
-
-            g2d.setColor(new Color(0, 0, 0, 180));
-            g2d.setStroke(new BasicStroke(1.5f));
-            g2d.drawPolygon(xPoints, yPoints, xPoints.length);
-
-            // Draw aircraft ID
-            g2d.setFont(AIRCRAFT_FONT);
-            String idText = String.valueOf(id);
-            FontMetrics fm = g2d.getFontMetrics();
-            int textWidth = fm.stringWidth(idText);
-            g2d.setColor(Color.WHITE);
-            g2d.drawString(idText, x - textWidth / 2, y + 4);
-        }
-
-        private void drawAircraftTimeWindows(Graphics2D g2d, AircraftData aircraft, double effectiveTimeScale,
-                int y, int barHeight) {
-            int earliestTime = aircraft.getEarliestLandingTime();
-            int latestTime = aircraft.getLatestLandingTime();
-            int targetTime = aircraft.getTargetLandingTime();
-
-            int earliestX = margin + (int) (earliestTime * effectiveTimeScale);
-            int latestX = margin + (int) (latestTime * effectiveTimeScale);
-            int targetX = margin + (int) (targetTime * effectiveTimeScale);
-
-            // Time window line
-            g2d.setColor(new Color(100, 100, 255, 120));
-            g2d.setStroke(new BasicStroke(2, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER,
-                    10.0f, new float[] { 5.0f }, 0.0f));
-            g2d.drawLine(earliestX, y + barHeight / 2, latestX, y + barHeight / 2);
-
-            // Target time line
-            g2d.setColor(new Color(255, 50, 50, 180));
-            g2d.setStroke(new BasicStroke(2));
-            g2d.drawLine(targetX, y, targetX, y + barHeight);
-
-            // Earliest and latest time markers
-            int markerSize = 5;
-            g2d.setColor(new Color(0, 0, 255, 150));
-            g2d.fillRect(earliestX - markerSize / 2, y, markerSize, barHeight);
-            g2d.fillRect(latestX - markerSize / 2, y, markerSize, barHeight);
-        }
-
-        private void drawLegend(Graphics2D g2d, Map<Integer, Color> aircraftColors) {
-            int legendY = getHeight() - margin + 40;
-            int legendX = margin;
-            int boxSize = 15;
-            int legendSpacing = 150;
-
-            g2d.setFont(INFO_FONT);
-
-            // Time window
-            g2d.setColor(new Color(100, 100, 255, 120));
-            g2d.setStroke(new BasicStroke(2, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER,
-                    10.0f, new float[] { 5.0f }, 0.0f));
-            g2d.drawLine(legendX, legendY, legendX + boxSize * 2, legendY);
-            g2d.setColor(TEXT_COLOR);
-            g2d.drawString("Time Window", legendX + boxSize * 2 + 5, legendY + 5);
-
-            // Target time
-            legendX += legendSpacing;
-            g2d.setColor(new Color(255, 50, 50, 180));
-            g2d.setStroke(new BasicStroke(2));
-            g2d.drawLine(legendX + boxSize, legendY - boxSize / 2, legendX + boxSize, legendY + boxSize / 2);
-            g2d.setColor(TEXT_COLOR);
-            g2d.drawString("Target Time", legendX + boxSize * 2 + 5, legendY + 5);
-
-            // Aircraft
-            legendX += legendSpacing;
-            Color sampleColor = aircraftColors.get(0);
-            drawAircraftIcon(g2d, legendX + boxSize, legendY, sampleColor, 15, 1);
-            g2d.setColor(TEXT_COLOR);
-            g2d.drawString("Aircraft", legendX + boxSize * 2 + 5, legendY + 5);
-
-            // Runway
-            legendX += legendSpacing;
-            Color runwayColor = RUNWAY_COLORS[0];
-            g2d.setColor(runwayColor);
-            g2d.fillRoundRect(legendX, legendY - boxSize / 2, boxSize * 2, boxSize, 5, 5);
-            g2d.setColor(TEXT_COLOR);
-            g2d.drawString("Runway", legendX + boxSize * 2 + 5, legendY + 5);
-        }
-
-        private void drawTooltip(Graphics2D g2d, String text, Point location) {
-            FontMetrics fm = g2d.getFontMetrics(INFO_FONT);
-            Rectangle2D textBounds = fm.getStringBounds(text, g2d);
-
-            int padding = 5;
-            int tooltipX = location.x;
-            int tooltipY = location.y - 30; // Position above the mouse cursor
-            int tooltipWidth = (int) textBounds.getWidth() + padding * 2;
-            int tooltipHeight = (int) textBounds.getHeight() + padding * 2;
+            int padding = 6;
+            int boxX = x - textWidth / 2 - padding;
+            int boxY = y - textHeight - padding;
+            int boxWidth = textWidth + padding * 2;
+            int boxHeight = textHeight + padding * 2;
 
             // Draw tooltip background
-            g2d.setColor(new Color(255, 255, 220));
-            g2d.fillRoundRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, 6, 6);
-
-            // Draw tooltip border
-            g2d.setColor(new Color(150, 150, 150));
-            g2d.drawRoundRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, 6, 6);
+            g2d.setColor(new Color(50, 50, 50, 220));
+            g2d.fillRoundRect(boxX, boxY, boxWidth, boxHeight, 8, 8);
 
             // Draw tooltip text
-            g2d.setColor(Color.BLACK);
-            g2d.setFont(INFO_FONT);
-            g2d.drawString(text, tooltipX + padding, tooltipY + fm.getAscent() + padding);
-        }
-
-        public void zoomIn() {
-            zoomFactor *= 1.2;
-            repaint();
-        }
-
-        public void zoomOut() {
-            zoomFactor = Math.max(0.1, zoomFactor / 1.2);
-            repaint();
-        }
-
-        public void resetZoom() {
-            zoomFactor = 1.0;
-            translateX = 0;
-            translateY = 0;
-            repaint();
-        }
-
-        @Override
-        public void mouseWheelMoved(MouseWheelEvent e) {
-            if (e.getWheelRotation() < 0) {
-                zoomIn();
-            } else {
-                zoomOut();
-            }
-        }
-
-        @Override
-        public void mouseDragged(MouseEvent e) {
-            if (dragStart != null) {
-                translateX += e.getX() - dragStart.getX();
-                translateY += e.getY() - dragStart.getY();
-                dragStart = e.getPoint();
-                repaint();
-            }
-        }
-
-        @Override
-        public void mouseMoved(MouseEvent e) {
-            e.getPoint();
-
-            // Check if mouse is over an aircraft
-            Point transformedPoint = new Point(
-                    e.getX() - translateX,
-                    e.getY() - translateY);
-
-            ALPInstance instance = solution.getInstance();
-            int numAircraft = instance.getNumAircraft();
-            double effectiveTimeScale = timeScale * zoomFactor;
-
-            // Clear tooltip
-            boolean foundAircraft = false;
-
-            for (int i = 0; i < numAircraft; i++) {
-                int landingTime = solution.getLandingTime(i);
-                int runway = solution.getRunwayAssignment(i);
-                AircraftData aircraft = instance.getAircraft().get(i);
-
-                int x = margin + (int) (landingTime * effectiveTimeScale);
-                int y = margin + runway * (barHeight + spacing * 2) + spacing + barHeight / 2;
-
-                // Check if mouse is near aircraft
-                if (Math.abs(transformedPoint.x - x) < 20 && Math.abs(transformedPoint.y - y) < 20) {
-                    // Create tooltip
-                    tooltip = "Aircraft " + (i + 1) +
-                            "\nLanding Time: " + landingTime +
-                            "\nTarget Time: " + aircraft.getTargetLandingTime() +
-                            "\nRunway: " + (runway + 1);
-                    tooltipPoint = e.getPoint();
-                    foundAircraft = true;
-                    repaint();
-                    break;
-                }
-            }
-
-            if (!foundAircraft && tooltip != null) {
-                tooltip = null;
-                repaint();
-            }
-        }
-
-        @Override
-        public void mousePressed(MouseEvent e) {
-            dragStart = e.getPoint();
-            setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        }
-
-        @Override
-        public void mouseReleased(MouseEvent e) {
-            dragStart = null;
-            setCursor(Cursor.getDefaultCursor());
-        }
-
-        @Override
-        public void mouseClicked(MouseEvent e) {
-            // Not used
-        }
-
-        @Override
-        public void mouseEntered(MouseEvent e) {
-            // Not used
-        }
-
-        @Override
-        public void mouseExited(MouseEvent e) {
-            tooltip = null;
-            repaint();
+            g2d.setColor(Color.WHITE);
+            g2d.setFont(NORMAL_FONT);
+            g2d.drawString(text, boxX + padding, boxY + textHeight);
         }
     }
 
     /**
-     * Panel for animated visualization of aircraft landing on runways
+     * Panel for displaying an animated simulation of aircraft landings.
      */
-    public static class RunwayAnimationPanel extends JPanel implements ActionListener {
+    private static class SimulationPanel extends JPanel {
         private ALPSolution solution;
-        private Timer animationTimer;
         private int currentTime = 0;
-        private int maxTime;
-        private boolean animationRunning = false;
-        private BufferedImage backgroundImage;
+        private Map<Integer, Point2D.Double> aircraftPositions = new HashMap<>();
+        private Map<Integer, Double> aircraftAltitudes = new HashMap<>();
+        private static final double MAX_ALTITUDE = 300.0;
 
-        private final Color SKY_COLOR = new Color(135, 206, 250);
-        private final Color GROUND_COLOR = new Color(76, 153, 0);
-        private final Color RUNWAY_COLOR = new Color(80, 80, 80);
-        private final Color RUNWAY_STRIPE_COLOR = Color.WHITE;
-
-        // Aircraft state for animation
-        private Map<Integer, AircraftState> aircraftStates = new HashMap<>();
-
-        public RunwayAnimationPanel(ALPSolution solution) {
+        public SimulationPanel(ALPSolution solution) {
             this.solution = solution;
-            setBackground(SKY_COLOR);
-            setPreferredSize(new Dimension(1000, 500));
+            setBackground(PANEL_BACKGROUND);
 
-            // Initialize animation timer
-            animationTimer = new Timer(100, this);
-
-            // Determine max time for the animation
-            maxTime = 0;
+            // Initialize aircraft positions (off-screen)
             for (int i = 0; i < solution.getInstance().getNumAircraft(); i++) {
-                int landingTime = solution.getLandingTime(i);
-                if (landingTime > maxTime) {
-                    maxTime = landingTime;
-                }
+                aircraftPositions.put(i, new Point2D.Double(-100, -100));
+                aircraftAltitudes.put(i, MAX_ALTITUDE);
             }
 
-            // Add 20% to max time for animation to complete
-            maxTime = (int) (maxTime * 1.2);
-
-            // Initialize aircraft states
-            initializeAircraftStates();
-
-            // Create background image
-            createBackgroundImage();
-        }
-
-        private void initializeAircraftStates() {
-            ALPInstance instance = solution.getInstance();
-            int numAircraft = instance.getNumAircraft();
-
-            for (int i = 0; i < numAircraft; i++) {
-                int landingTime = solution.getLandingTime(i);
-                int runway = solution.getRunwayAssignment(i);
-
-                // Calculate approach start time (20% of total earlier than landing)
-                int approachStartTime = (int) (landingTime * 0.8);
-
-                // Generate a random initial position off-screen
-                double angle = Math.random() * Math.PI / 2 + Math.PI / 4; // 45-135 degrees
-                double distance = 500 + Math.random() * 300; // Varying distances
-                int startX = (int) (Math.cos(angle) * distance);
-                int startY = (int) (Math.sin(angle) * distance * -1); // Negative to go above
-
-                AircraftState state = new AircraftState(
-                        i, runway, landingTime, approachStartTime,
-                        startX, startY);
-
-                // Assign a unique color
-                float hue = i * (1.0f / numAircraft);
-                state.color = Color.getHSBColor(hue, 0.8f, 0.9f);
-
-                aircraftStates.put(i, state);
-            }
-        }
-
-        private void createBackgroundImage() {
-            // Create once for performance
-            backgroundImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB); // Placeholder
-
-            // Real creation happens when we know the size
-            addComponentListener(new ComponentAdapter() {
+            // Enable mouse interaction for aircraft info
+            addMouseMotionListener(new MouseAdapter() {
                 @Override
-                public void componentResized(ComponentEvent e) {
-                    createSizedBackgroundImage();
+                public void mouseMoved(MouseEvent e) {
+                    repaint(); // Refresh for hover effects
                 }
             });
         }
 
-        private void createSizedBackgroundImage() {
-            if (getWidth() <= 0 || getHeight() <= 0)
-                return;
-
-            backgroundImage = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g2d = backgroundImage.createGraphics();
-
-            // Draw sky
-            GradientPaint skyGradient = new GradientPaint(
-                    0, 0, new Color(100, 181, 246),
-                    0, getHeight() * 0.7f, new Color(197, 225, 252));
-            g2d.setPaint(skyGradient);
-            g2d.fillRect(0, 0, getWidth(), getHeight());
-
-            // Draw ground
-            int groundY = (int) (getHeight() * 0.7);
-            g2d.setColor(GROUND_COLOR);
-            g2d.fillRect(0, groundY, getWidth(), getHeight() - groundY);
-
-            // Draw runways
-            int numRunways = solution.getInstance().getNumRunways();
-            drawRunways(g2d, numRunways, groundY);
-
-            g2d.dispose();
+        public void setCurrentTime(int time) {
+            this.currentTime = time;
+            updateAircraftPositions();
+            repaint();
         }
 
-        private void drawRunways(Graphics2D g2d, int numRunways, int groundY) {
-            int runwayWidth = 40;
-            int runwaySpacing = getWidth() / (numRunways + 1);
+        private void updateAircraftPositions() {
+            ALPInstance instance = solution.getInstance();
+            int numAircraft = instance.getNumAircraft();
+            for (int i = 0; i < numAircraft; i++) {
+                int landingTime = solution.getLandingTime(i);
+                int runway = solution.getRunwayAssignment(i);
+                int timeToLanding = landingTime - currentTime;
 
-            for (int r = 0; r < numRunways; r++) {
-                int runwayX = (r + 1) * runwaySpacing - runwayWidth / 2;
+                double x, y, altitude;
 
-                // Draw runway
-                g2d.setColor(RUNWAY_COLOR);
-                g2d.fillRect(runwayX, groundY - 5, runwayWidth, getHeight() - groundY + 5);
+                if (timeToLanding > 20) {
+                    // Aircraft not visible yet (far away)
+                    x = -100;
+                    y = -100;
+                    altitude = MAX_ALTITUDE;
+                } else if (timeToLanding <= 0) {
+                    // Aircraft has landed
+                    double runwayX = getWidth() / 2;
+                    double runwayY = getHeight() * 0.7 + runway * 30;
 
-                // Draw runway stripes
-                g2d.setColor(RUNWAY_STRIPE_COLOR);
-                int stripeWidth = 4;
-                int stripeLength = 20;
-                int stripeSpacing = 40;
+                    if (timeToLanding >= -10) {
+                        // Show aircraft on the runway for a short time
+                        x = runwayX + (-timeToLanding * 10);
+                        y = runwayY;
+                        altitude = 0;
+                    } else {
+                        // Aircraft has left the scene
+                        x = -100;
+                        y = -100;
+                        altitude = 0;
+                    }
+                } else {
+                    // Aircraft is approaching
+                    double runwayX = getWidth() / 2;
+                    double runwayY = getHeight() * 0.7 + runway * 30;
 
-                for (int y = groundY; y < getHeight(); y += stripeSpacing) {
-                    g2d.fillRect(runwayX + runwayWidth / 2 - stripeWidth / 2, y, stripeWidth, stripeLength);
+                    // Calculate approach path
+                    double progress = 1.0 - timeToLanding / 20.0;
+
+                    // Start from a random position based on aircraft ID
+                    double startX = (i % 2 == 0) ? 0 : getWidth();
+                    double startY = 100 + ((i * 137) % (getHeight() * 0.3));
+
+                    // Interpolate position
+                    x = startX + progress * (runwayX - startX);
+                    y = startY + progress * (runwayY - startY);
+
+                    // Calculate altitude (descending)
+                    altitude = MAX_ALTITUDE * (1.0 - progress);
                 }
 
-                // Draw runway number
-                g2d.setFont(new Font("Segoe UI", Font.BOLD, 14));
-                g2d.setColor(Color.WHITE);
-                String runwayLabel = String.valueOf(r + 1);
-                FontMetrics fm = g2d.getFontMetrics();
-                int labelWidth = fm.stringWidth(runwayLabel);
-                g2d.drawString(runwayLabel,
-                        runwayX + runwayWidth / 2 - labelWidth / 2,
-                        groundY - 10);
+                aircraftPositions.put(i, new Point2D.Double(x, y));
+                aircraftAltitudes.put(i, altitude);
             }
         }
 
@@ -866,163 +827,208 @@ public class ScheduleVisualizer {
             Graphics2D g2d = (Graphics2D) g;
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            // Draw the background with runways
-            if (backgroundImage.getWidth() != getWidth() || backgroundImage.getHeight() != getHeight()) {
-                createSizedBackgroundImage();
-            }
-            g2d.drawImage(backgroundImage, 0, 0, null);
+            ALPInstance instance = solution.getInstance();
+            int numRunways = instance.getNumRunways();
+            int numAircraft = instance.getNumAircraft();
 
-            // Calculate runway positions
-            int numRunways = solution.getInstance().getNumRunways();
-            int runwaySpacing = getWidth() / (numRunways + 1);
-            int groundY = (int) (getHeight() * 0.7);
+            // Draw sky
+            GradientPaint skyGradient = new GradientPaint(
+                    0, 0, new Color(135, 206, 235),
+                    0, getHeight(), new Color(220, 240, 255));
+            g2d.setPaint(skyGradient);
+            g2d.fillRect(0, 0, getWidth(), getHeight());
+
+            // Draw ground
+            GradientPaint groundGradient = new GradientPaint(
+                    0, (int) (getHeight() * 0.6), new Color(120, 180, 80),
+                    0, getHeight(), new Color(80, 140, 40));
+            g2d.setPaint(groundGradient);
+            g2d.fillRect(0, (int) (getHeight() * 0.6), getWidth(), getHeight() - (int) (getHeight() * 0.6));
+
+            // Draw clouds
+            drawClouds(g2d);
+
+            // Draw runways
+            int runwayWidth = 300;
+            int runwayHeight = 20;
+            for (int r = 0; r < numRunways; r++) {
+                int x = getWidth() / 2 - runwayWidth / 2;
+                int y = (int) (getHeight() * 0.7) + r * 30 - runwayHeight / 2;
+
+                // Runway asphalt
+                g2d.setColor(new Color(60, 60, 60));
+                g2d.fillRect(x, y, runwayWidth, runwayHeight);
+
+                // Runway markings
+                g2d.setColor(Color.WHITE);
+                for (int i = 0; i < runwayWidth; i += 30) {
+                    g2d.fillRect(x + i, y + runwayHeight / 2 - 1, 15, 2);
+                }
+
+                // Runway number
+                g2d.setFont(NORMAL_FONT.deriveFont(Font.BOLD));
+                g2d.setColor(Color.WHITE);
+                g2d.drawString("R" + (r + 1), x - 25, y + runwayHeight / 2 + 5);
+            }
+
+            // Prepare colors for each aircraft
+            List<Color> colors = new ArrayList<>();
+            for (int i = 0; i < numAircraft; i++) {
+                int hue = (i * 137) % 360; // Golden ratio creates good color distribution
+                colors.add(Color.getHSBColor(hue / 360.0f, 0.7f, 0.9f));
+            }
 
             // Draw aircraft
-            for (AircraftState aircraft : aircraftStates.values()) {
-                if (currentTime < aircraft.approachStartTime)
-                    continue;
+            for (int i = 0; i < numAircraft; i++) {
+                Point2D.Double pos = aircraftPositions.get(i);
+                double altitude = aircraftAltitudes.get(i);
 
-                // Calculate runway x position
-                int runwayX = (aircraft.runway + 1) * runwaySpacing;
+                if (pos.x < 0 || pos.y < 0)
+                    continue; // Skip if off-screen
 
-                // Calculate aircraft position based on time
-                if (currentTime <= aircraft.landingTime) {
-                    // Aircraft is approaching
-                    double progress = (double) (currentTime - aircraft.approachStartTime) /
-                            (aircraft.landingTime - aircraft.approachStartTime);
-
-                    int currentX = (int) (aircraft.startX + (runwayX - aircraft.startX) * progress);
-                    int currentY = (int) (aircraft.startY + (groundY - aircraft.startY) * progress);
-
-                    drawAircraft(g2d, currentX, currentY, aircraft.color, aircraft.id + 1);
-                } else {
-                    // Aircraft has landed, draw on runway
-                    // Calculate how far down the runway based on time since landing
-                    double runwayProgress = Math.min(1.0, (currentTime - aircraft.landingTime) / 20.0);
-                    int landedY = (int) (groundY + (getHeight() - groundY) * runwayProgress);
-
-                    drawAircraftOnGround(g2d, runwayX, landedY, aircraft.color, aircraft.id + 1);
-                }
+                Color aircraftColor = colors.get(i);
+                drawAircraft(g2d, pos.x, pos.y, aircraftColor, i, altitude);
             }
 
             // Draw time display
-            g2d.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            g2d.setColor(Color.BLACK);
-            g2d.drawString("Time: " + currentTime, 30, 30);
-        }
-
-        private void drawAircraft(Graphics2D g2d, int x, int y, Color color, int id) {
-            int size = 20;
-
-            // Draw aircraft shape in air
-            int[] xPoints = { x, x - size, x - size / 3, x - size / 3, x, x + size / 3, x + size / 3, x + size };
-            int[] yPoints = { y - size / 3, y, y, y + size / 2, y + size / 3, y + size / 2, y, y };
-
-            g2d.setColor(color);
-            g2d.fillPolygon(xPoints, yPoints, 8);
-
             g2d.setColor(new Color(0, 0, 0, 180));
-            g2d.setStroke(new BasicStroke(1.5f));
-            g2d.drawPolygon(xPoints, yPoints, 8);
-
-            // Draw aircraft ID
-            g2d.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            g2d.fillRoundRect(10, 10, 150, 30, 10, 10);
             g2d.setColor(Color.WHITE);
-            String idText = String.valueOf(id);
-            FontMetrics fm = g2d.getFontMetrics();
-            int textWidth = fm.stringWidth(idText);
-            g2d.drawString(idText, x - textWidth / 2, y + 4);
+            g2d.setFont(HEADER_FONT);
+            g2d.drawString("Time: " + currentTime, 20, 30);
+
+            // Draw aircraft info if hovering
+            Point mousePos = getMousePosition();
+            if (mousePos != null) {
+                for (int i = 0; i < numAircraft; i++) {
+                    Point2D.Double pos = aircraftPositions.get(i);
+                    if (pos.x >= 0 && pos.y >= 0) {
+                        double distance = mousePos.distance(pos);
+                        if (distance < 30) {
+                            drawAircraftInfo(g2d, i, pos.x, pos.y);
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
-        private void drawAircraftOnGround(Graphics2D g2d, int x, int y, Color color, int id) {
-            int size = 15;
+        private void drawClouds(Graphics2D g2d) {
+            g2d.setColor(new Color(255, 255, 255, 180));
 
-            // Draw a simplified aircraft on ground (top view)
+            // Generate some random clouds based on seed to keep them consistent
+            Random random = new Random(42);
+            for (int i = 0; i < 10; i++) {
+                int x = random.nextInt(getWidth());
+                int y = random.nextInt((int) (getHeight() * 0.4));
+                int size = 20 + random.nextInt(40);
+
+                // Draw a fluffy cloud
+                for (int j = 0; j < 5; j++) {
+                    int offsetX = random.nextInt(size) - size / 2;
+                    int offsetY = random.nextInt(size / 2) - size / 4;
+                    g2d.fillOval(x + offsetX, y + offsetY, size, size);
+                }
+            }
+        }
+
+        private void drawAircraft(Graphics2D g2d, double x, double y, Color color, int aircraftId, double altitude) {
+            int size = 15 + (int) (altitude / 30);
+
+            // Shadow on ground
+            if (altitude < 100) {
+                g2d.setColor(new Color(0, 0, 0, 50));
+                double groundY = getHeight() * 0.7 + solution.getRunwayAssignment(aircraftId) * 30;
+                int shadowSize = Math.max(5, size - (int) (altitude / 10));
+                g2d.fillOval((int) x - shadowSize / 2, (int) groundY - shadowSize / 2, shadowSize, shadowSize);
+            }
+
+            // Aircraft body
             g2d.setColor(color);
-            g2d.fillOval(x - size / 2, y - size, size, size * 2);
 
-            // Draw wings
-            g2d.fillRect(x - size, y - size / 3, size * 2, size / 3);
+            // Draw aircraft as a stylized plane shape
+            int[] xPoints = new int[] {
+                    (int) x, (int) (x + size / 2), (int) (x + size / 3), (int) (x - size / 3), (int) (x - size / 2)
+            };
+            int[] yPoints = new int[] {
+                    (int) (y - size / 2), (int) y, (int) (y + size / 2), (int) (y + size / 2), (int) y
+            };
+            g2d.fillPolygon(xPoints, yPoints, 5);
 
-            // Border
-            g2d.setColor(new Color(0, 0, 0, 180));
-            g2d.setStroke(new BasicStroke(1));
-            g2d.drawOval(x - size / 2, y - size, size, size * 2);
-            g2d.drawRect(x - size, y - size / 3, size * 2, size / 3);
+            // Wings
+            int wingSize = size * 2 / 3;
+            g2d.fillRect((int) (x - wingSize / 2), (int) (y - size / 6), wingSize, size / 3);
 
-            // ID
-            g2d.setFont(new Font("Segoe UI", Font.BOLD, 10));
+            // Tail
+            int tailSize = size / 3;
+            int[] tailX = new int[] {
+                    (int) (x - size / 3), (int) (x - size / 3), (int) (x - size / 2 - tailSize / 2)
+            };
+            int[] tailY = new int[] {
+                    (int) (y - size / 6), (int) (y - size / 2), (int) (y - size / 2)
+            };
+            g2d.fillPolygon(tailX, tailY, 3);
+
+            // Add aircraft ID
             g2d.setColor(Color.WHITE);
-            String idText = String.valueOf(id);
+            g2d.setFont(SMALL_FONT);
+            String aircraftIdStr = "A" + (aircraftId + 1);
             FontMetrics fm = g2d.getFontMetrics();
-            int textWidth = fm.stringWidth(idText);
-            g2d.drawString(idText, x - textWidth / 2, y);
+            g2d.drawString(aircraftIdStr, (int) (x - fm.stringWidth(aircraftIdStr) / 2), (int) y + fm.getHeight() / 4);
         }
 
-        public void startAnimation() {
-            if (!animationRunning) {
-                animationTimer.start();
-                animationRunning = true;
-            }
-        }
+        private void drawAircraftInfo(Graphics2D g2d, int aircraftId, double x, double y) {
+            AircraftData aircraft = solution.getInstance().getAircraft().get(aircraftId);
+            int landingTime = solution.getLandingTime(aircraftId);
+            int runway = solution.getRunwayAssignment(aircraftId);
+            int targetTime = aircraft.getTargetLandingTime();
+            int timeToLanding = landingTime - currentTime;
 
-        public void pauseAnimation() {
-            if (animationRunning) {
-                animationTimer.stop();
-                animationRunning = false;
-            }
-        }
+            String[] infoLines = {
+                    "Aircraft: A" + (aircraftId + 1),
+                    "Runway: R" + (runway + 1),
+                    "Landing Time: " + landingTime,
+                    "Target Time: " + targetTime,
+                    "Status: " + (timeToLanding > 0 ? "Approaching (" + timeToLanding + " time units)"
+                            : "Landed (" + (-timeToLanding) + " time units ago)")
+            };
 
-        public void resetAnimation() {
-            currentTime = 0;
-            if (animationRunning) {
-                animationTimer.stop();
-                animationRunning = false;
-            }
-            repaint();
-        }
-
-        public void setAnimationSpeed(int speed) {
-            animationTimer.setDelay(1000 / speed);
-            if (animationRunning) {
-                animationTimer.restart();
-            }
-        }
-
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            // Update animation time
-            currentTime++;
-
-            // Check if animation has reached the end
-            if (currentTime > maxTime) {
-                pauseAnimation();
+            // Calculate box size
+            g2d.setFont(NORMAL_FONT);
+            FontMetrics fm = g2d.getFontMetrics();
+            int lineHeight = fm.getHeight();
+            int maxWidth = 0;
+            for (String line : infoLines) {
+                maxWidth = Math.max(maxWidth, fm.stringWidth(line));
             }
 
-            repaint();
-        }
+            int padding = 10;
+            int boxWidth = maxWidth + padding * 2;
+            int boxHeight = lineHeight * infoLines.length + padding * 2;
 
-        /**
-         * Inner class to represent aircraft state for animation
-         */
-        public class AircraftState {
-            int id;
-            int runway;
-            int landingTime;
-            int approachStartTime;
-            int startX;
-            int startY;
-            Color color;
+            // Adjust position to keep within bounds
+            int boxX = (int) x + 20;
+            if (boxX + boxWidth > getWidth())
+                boxX = (int) x - boxWidth - 20;
 
-            public AircraftState(int id, int runway, int landingTime, int approachStartTime,
-                    int startX, int startY) {
-                this.id = id;
-                this.runway = runway;
-                this.landingTime = landingTime;
-                this.approachStartTime = approachStartTime;
-                this.startX = startX;
-                this.startY = startY;
+            int boxY = (int) y - boxHeight / 2;
+            if (boxY < 0)
+                boxY = 0;
+            if (boxY + boxHeight > getHeight())
+                boxY = getHeight() - boxHeight;
+
+            // Draw info box
+            g2d.setColor(new Color(0, 0, 0, 200));
+            g2d.fillRoundRect(boxX, boxY, boxWidth, boxHeight, 10, 10);
+
+            // Draw text
+            g2d.setColor(Color.WHITE);
+            for (int i = 0; i < infoLines.length; i++) {
+                g2d.drawString(infoLines[i], boxX + padding, boxY + padding + lineHeight * (i + 1) - lineHeight / 4);
             }
+
+            // Draw pointer line
+            g2d.drawLine((int) x, (int) y, boxX + (x > boxX + boxWidth ? boxWidth : 0), boxY + boxHeight / 2);
         }
     }
 }
