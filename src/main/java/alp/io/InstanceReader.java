@@ -25,7 +25,7 @@ public class InstanceReader {
      */
     public static ALPInstance readInstance(String filePath, int numRunways, int maxAircraft) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(filePath));
-        
+
         // Extract file name from path
         String[] pathParts = filePath.split("[/\\\\]");
         String instanceName = pathParts[pathParts.length - 1].split("\\.")[0];
@@ -52,29 +52,26 @@ public class InstanceReader {
                 System.err.println("Unexpected end of file while reading aircraft data.");
                 break;
             }
-            
+
             String[] parts = line.trim().split("\\s+");
-            
+
             try {
-                // Parse aircraft data: appearance time is at index 0,
-                // earliest landing time at index 1, target at index 2, latest at index 3
-                int appearanceTime = Integer.parseInt(parts[0]);
                 int earliestLandingTime = Integer.parseInt(parts[1]);
                 int targetLandingTime = Integer.parseInt(parts[2]);
                 int latestLandingTime = Integer.parseInt(parts[3]);
                 double earlyPenalty = Double.parseDouble(parts[4]);
                 double latePenalty = Double.parseDouble(parts[5]);
-                
+
                 // Validate the time windows
                 if (latestLandingTime < earliestLandingTime) {
                     System.err.println("Data error: latest < earliest for aircraft " + (i + 1));
                     latestLandingTime = earliestLandingTime + 100; // Correction
                 }
-                
+
                 AircraftData aircraft = new AircraftData(i, earliestLandingTime, targetLandingTime,
                         latestLandingTime, earlyPenalty, latePenalty);
                 aircraftList.add(aircraft);
-                
+
                 // Print aircraft data for debugging
                 System.out.println("Aircraft " + (i + 1) + ": E=" + earliestLandingTime +
                         ", T=" + targetLandingTime + ", L=" + latestLandingTime);
@@ -84,7 +81,7 @@ public class InstanceReader {
                 AircraftData aircraft = new AircraftData(i, 0, 10, 20, 1.0, 1.0);
                 aircraftList.add(aircraft);
             }
-            
+
             // Read separation times for this aircraft with all others
             // This might span multiple lines in the file
             int j = 0;
@@ -94,15 +91,16 @@ public class InstanceReader {
                     System.err.println("Unexpected end of file while reading separation times.");
                     break;
                 }
-                
+
                 String[] sepTimes = line.trim().split("\\s+");
                 for (String sepTime : sepTimes) {
-                    if (j >= actualAircraft) break;
-                    
+                    if (j >= actualAircraft)
+                        break;
+
                     try {
                         separationTimes[i][j] = Integer.parseInt(sepTime);
                     } catch (NumberFormatException e) {
-                        System.err.println("Invalid separation time format: " + sepTime + 
+                        System.err.println("Invalid separation time format: " + sepTime +
                                 ", using default value");
                         separationTimes[i][j] = (i == j) ? 0 : 3; // Default separation time
                     }
@@ -110,24 +108,25 @@ public class InstanceReader {
                 }
             }
         }
-        
+
         // Skip the rest of the data for aircraft we're not using
         if (actualAircraft < numAircraft) {
             for (int i = actualAircraft; i < numAircraft; i++) {
                 reader.readLine(); // Skip aircraft data line
-                
+
                 // Skip separation times for this aircraft
                 int j = 0;
                 while (j < numAircraft) {
                     String line2 = reader.readLine();
-                    if (line2 == null) break;
-                    
+                    if (line2 == null)
+                        break;
+
                     String[] sepTimes = line2.trim().split("\\s+");
                     j += sepTimes.length;
                 }
             }
         }
-        
+
         reader.close();
         System.out.println("Instance loaded successfully: " + actualAircraft + " aircraft");
         return new ALPInstance(aircraftList, separationTimes, numRunways, instanceName);
