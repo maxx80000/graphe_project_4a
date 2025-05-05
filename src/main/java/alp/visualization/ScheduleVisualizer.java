@@ -3,13 +3,12 @@ package alp.visualization;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Point2D;
+import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.List;
 import java.util.Timer;
 import javax.swing.*;
 import javax.swing.border.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.table.DefaultTableCellRenderer;
 
 import alp.model.ALPInstance;
@@ -23,18 +22,9 @@ import alp.model.AircraftData;
  */
 public class ScheduleVisualizer {
 
-    // Constants for visualization
-    private static final Color BACKGROUND_COLOR = new Color(245, 245, 250);
-    private static final Color PANEL_BACKGROUND = new Color(255, 255, 255);
-    private static final Color HEADER_COLOR = new Color(60, 90, 180);
-    private static final Color GRID_COLOR = new Color(230, 230, 240);
-    private static final Color TIME_AXIS_COLOR = new Color(100, 100, 120);
-    private static final Color TIMELINE_COLOR = new Color(200, 80, 80, 180);
-
-    private static final Font TITLE_FONT = new Font("Segoe UI", Font.BOLD, 18);
-    private static final Font HEADER_FONT = new Font("Segoe UI", Font.BOLD, 14);
-    private static final Font NORMAL_FONT = new Font("Segoe UI", Font.PLAIN, 12);
-    private static final Font SMALL_FONT = new Font("Segoe UI", Font.PLAIN, 10);
+    // Chronométrage pour les animations
+    private static final int ANIMATION_SPEED_MS = 100;
+    private static final int TIMELINE_STEP = 1;
 
     /**
      * Displays an enhanced visualization of the aircraft landing schedule.
@@ -52,9 +42,16 @@ public class ScheduleVisualizer {
             frame.setSize(1200, 800);
             frame.setLocationRelativeTo(null);
 
+            // Création correcte de l'icône
+            BufferedImage airplaneImage = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2d = airplaneImage.createGraphics();
+            UIUtils.createAirplaneIcon(32, UIUtils.PRIMARY_COLOR).paintIcon(null, g2d, 0, 0);
+            g2d.dispose();
+            frame.setIconImage(airplaneImage);
+
             // Create the main content panel with layout
             JPanel mainPanel = new JPanel(new BorderLayout(0, 0));
-            mainPanel.setBackground(BACKGROUND_COLOR);
+            mainPanel.setBackground(UIUtils.BACKGROUND_COLOR);
 
             // Create header panel
             JPanel headerPanel = createHeaderPanel(solution);
@@ -62,8 +59,8 @@ public class ScheduleVisualizer {
 
             // Create tabbed pane for different views
             JTabbedPane tabbedPane = new JTabbedPane();
-            tabbedPane.setFont(HEADER_FONT);
-            tabbedPane.setBackground(PANEL_BACKGROUND);
+            tabbedPane.setFont(UIUtils.HEADER_FONT);
+            tabbedPane.setBackground(UIUtils.PANEL_BACKGROUND);
 
             // Create schedule visualization panel
             SchedulePanel schedulePanel = new SchedulePanel(solution);
@@ -74,13 +71,13 @@ public class ScheduleVisualizer {
             // Create simulation panel
             SimulationPanel simulationPanel = new SimulationPanel(solution);
 
-            // Add panels to tabbed pane
-            tabbedPane.addTab("Schedule Timeline", new ImageIcon(), new JScrollPane(schedulePanel),
-                    "Gantt chart visualization of landing schedule");
-            tabbedPane.addTab("Simulation", new ImageIcon(), simulationPanel,
-                    "Animated simulation of aircraft landings");
-            tabbedPane.addTab("Statistics", new ImageIcon(), new JScrollPane(statsPanel),
-                    "Detailed optimization statistics");
+            // Add panels to tabbed pane with icons
+            tabbedPane.addTab("Schedule Timeline", UIUtils.createVisualizeIcon(16, UIUtils.PRIMARY_COLOR),
+                    new JScrollPane(schedulePanel), "Gantt chart visualization of landing schedule");
+            tabbedPane.addTab("Simulation", UIUtils.createAirplaneIcon(16, UIUtils.PRIMARY_COLOR),
+                    simulationPanel, "Animated simulation of aircraft landings");
+            tabbedPane.addTab("Statistics", UIUtils.createCompareIcon(16, UIUtils.PRIMARY_COLOR),
+                    new JScrollPane(statsPanel), "Detailed optimization statistics");
 
             mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
@@ -99,22 +96,23 @@ public class ScheduleVisualizer {
     private static JPanel createHeaderPanel(ALPSolution solution) {
         JPanel headerPanel = new JPanel();
         headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
-        headerPanel.setBackground(PANEL_BACKGROUND);
+        headerPanel.setBackground(UIUtils.PANEL_BACKGROUND);
         headerPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, GRID_COLOR),
+                BorderFactory.createMatteBorder(0, 0, 1, 0, UIUtils.GRID_COLOR),
                 BorderFactory.createEmptyBorder(15, 20, 15, 20)));
 
         // Title with problem variant
         JLabel titleLabel = new JLabel("Aircraft Landing Schedule Optimization");
-        titleLabel.setFont(TITLE_FONT);
-        titleLabel.setForeground(HEADER_COLOR);
+        titleLabel.setFont(UIUtils.TITLE_FONT);
+        titleLabel.setForeground(UIUtils.PRIMARY_COLOR);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // Subtitle with instance info
         JLabel instanceLabel = new JLabel("Instance: " + solution.getInstance().getInstanceName() +
                 " | Problem: " + solution.getProblemVariant());
-        instanceLabel.setFont(HEADER_FONT);
+        instanceLabel.setFont(UIUtils.HEADER_FONT);
         instanceLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        instanceLabel.setForeground(UIUtils.TEXT_PRIMARY);
 
         // Result metrics
         JPanel metricsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
@@ -145,11 +143,12 @@ public class ScheduleVisualizer {
         metricPanel.setOpaque(false);
 
         JLabel metricLabel = new JLabel(label);
-        metricLabel.setFont(SMALL_FONT);
-        metricLabel.setForeground(Color.DARK_GRAY);
+        metricLabel.setFont(UIUtils.SMALL_FONT);
+        metricLabel.setForeground(UIUtils.TEXT_SECONDARY);
 
         JLabel metricValue = new JLabel(value);
-        metricValue.setFont(HEADER_FONT);
+        metricValue.setFont(UIUtils.HEADER_FONT);
+        metricValue.setForeground(UIUtils.TEXT_PRIMARY);
 
         metricPanel.add(metricLabel);
         metricPanel.add(metricValue);
@@ -163,9 +162,9 @@ public class ScheduleVisualizer {
     private static JPanel createControlPanel(ALPSolution solution, SchedulePanel schedulePanel,
             SimulationPanel simulationPanel) {
         JPanel controlPanel = new JPanel(new BorderLayout());
-        controlPanel.setBackground(PANEL_BACKGROUND);
+        controlPanel.setBackground(UIUtils.PANEL_BACKGROUND);
         controlPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, GRID_COLOR),
+                BorderFactory.createMatteBorder(1, 0, 0, 0, UIUtils.GRID_COLOR),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)));
 
         // Find the latest landing time for scaling
@@ -179,33 +178,36 @@ public class ScheduleVisualizer {
 
         // Create time slider
         JLabel sliderLabel = new JLabel("Current Time: 0");
-        sliderLabel.setFont(NORMAL_FONT);
+        sliderLabel.setFont(UIUtils.NORMAL_FONT);
+        sliderLabel.setForeground(UIUtils.TEXT_PRIMARY);
 
         JSlider timeSlider = new JSlider(0, maxLandingTime, 0);
-        timeSlider.setBackground(PANEL_BACKGROUND);
+        timeSlider.setBackground(UIUtils.PANEL_BACKGROUND);
         timeSlider.setMajorTickSpacing(maxLandingTime / 10);
         timeSlider.setMinorTickSpacing(maxLandingTime / 50);
         timeSlider.setPaintTicks(true);
         timeSlider.setPaintLabels(true);
-        timeSlider.setFont(SMALL_FONT);
+        timeSlider.setFont(UIUtils.SMALL_FONT);
+        timeSlider.setForeground(UIUtils.TEXT_PRIMARY);
 
-        timeSlider.addChangeListener(new ChangeListener() {
-            @Override
-            public void stateChanged(ChangeEvent e) {
-                int time = timeSlider.getValue();
-                sliderLabel.setText("Current Time: " + time);
-                schedulePanel.setCurrentTime(time);
-                simulationPanel.setCurrentTime(time);
-            }
+        timeSlider.addChangeListener(e -> {
+            int time = timeSlider.getValue();
+            sliderLabel.setText("Current Time: " + time);
+            schedulePanel.setCurrentTime(time);
+            simulationPanel.setCurrentTime(time);
         });
 
         // Create playback control buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         buttonPanel.setOpaque(false);
 
-        JButton playButton = new JButton("Play");
-        JButton pauseButton = new JButton("Pause");
-        JButton resetButton = new JButton("Reset");
+        JButton playButton = UIUtils.createSecondaryButton("Play", null);
+        playButton.setIcon(UIUtils.createPlayIcon(16, UIUtils.PRIMARY_COLOR));
+
+        JButton pauseButton = UIUtils.createSecondaryButton("Pause", null);
+        pauseButton.setIcon(UIUtils.createPauseIcon(16, UIUtils.PRIMARY_COLOR));
+
+        JButton resetButton = UIUtils.createSecondaryButton("Reset", null);
 
         // Animation timer
         final Timer[] timer = { null };
@@ -222,14 +224,14 @@ public class ScheduleVisualizer {
                 public void run() {
                     if (timeSlider.getValue() < timeSlider.getMaximum()) {
                         SwingUtilities.invokeLater(() -> {
-                            timeSlider.setValue(timeSlider.getValue() + 1);
+                            timeSlider.setValue(timeSlider.getValue() + TIMELINE_STEP);
                         });
                     } else {
                         timer[0].cancel();
                         timer[0] = null;
                     }
                 }
-            }, 0, 100 * animationSpeed[0]);
+            }, 0, ANIMATION_SPEED_MS * animationSpeed[0]);
         });
 
         pauseButton.addActionListener(e -> {
@@ -249,11 +251,20 @@ public class ScheduleVisualizer {
 
         // Speed control
         JLabel speedLabel = new JLabel("Speed: ");
+        speedLabel.setFont(UIUtils.NORMAL_FONT);
+        speedLabel.setForeground(UIUtils.TEXT_PRIMARY);
+
         JComboBox<String> speedCombo = new JComboBox<>(new String[] { "0.5x", "1x", "2x", "5x", "10x" });
         speedCombo.setSelectedIndex(1); // Default 1x
+        speedCombo.setFont(UIUtils.NORMAL_FONT);
+        speedCombo.setBackground(UIUtils.PANEL_BACKGROUND);
+        speedCombo.setForeground(UIUtils.TEXT_PRIMARY);
 
         speedCombo.addActionListener(e -> {
             String selected = (String) speedCombo.getSelectedItem();
+            if (selected == null)
+                return;
+
             switch (selected) {
                 case "0.5x":
                     animationSpeed[0] = 2;
@@ -301,12 +312,12 @@ public class ScheduleVisualizer {
 
         JPanel statsPanel = new JPanel();
         statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.Y_AXIS));
-        statsPanel.setBackground(PANEL_BACKGROUND);
+        statsPanel.setBackground(UIUtils.PANEL_BACKGROUND);
         statsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         // Add summary panel
         JPanel summaryPanel = new JPanel(new GridLayout(0, 2, 10, 10));
-        summaryPanel.setBackground(PANEL_BACKGROUND);
+        summaryPanel.setBackground(UIUtils.PANEL_BACKGROUND);
         summaryPanel.setBorder(createSectionBorder("Optimization Summary"));
         summaryPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -396,7 +407,7 @@ public class ScheduleVisualizer {
 
         // Add detailed aircraft data table
         JPanel tablePanel = new JPanel(new BorderLayout());
-        tablePanel.setBackground(PANEL_BACKGROUND);
+        tablePanel.setBackground(UIUtils.PANEL_BACKGROUND);
         tablePanel.setBorder(createSectionBorder("Aircraft Landing Details"));
         tablePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -452,11 +463,13 @@ public class ScheduleVisualizer {
 
         // Create and configure table
         JTable table = new JTable(data, columnNames);
-        table.setFont(NORMAL_FONT);
+        table.setFont(UIUtils.NORMAL_FONT);
         table.setRowHeight(25);
-        table.getTableHeader().setFont(HEADER_FONT);
+        table.getTableHeader().setFont(UIUtils.HEADER_FONT);
         table.setAutoCreateRowSorter(true);
         table.setFillsViewportHeight(true);
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
 
         // Cell renderer for coloring early/late
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
@@ -469,6 +482,9 @@ public class ScheduleVisualizer {
 
                 int modelRow = table.convertRowIndexToModel(row);
 
+                // Add padding
+                ((JLabel) c).setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+
                 if (!isSelected) {
                     int deviation = 0;
                     if (columnNames[column].equals("Deviation")) {
@@ -478,11 +494,14 @@ public class ScheduleVisualizer {
                     }
 
                     if (deviation < 0) {
-                        c.setBackground(new Color(230, 255, 230));
+                        c.setBackground(new Color(220, 255, 220));
+                        ((JLabel) c).setForeground(UIUtils.SUCCESS_COLOR);
                     } else if (deviation > 0) {
-                        c.setBackground(new Color(255, 230, 230));
+                        c.setBackground(new Color(255, 220, 220));
+                        ((JLabel) c).setForeground(UIUtils.ERROR_COLOR);
                     } else {
-                        c.setBackground(Color.WHITE);
+                        c.setBackground(row % 2 == 0 ? UIUtils.PANEL_BACKGROUND : new Color(248, 250, 253));
+                        ((JLabel) c).setForeground(UIUtils.TEXT_PRIMARY);
                     }
                 }
 
@@ -492,6 +511,7 @@ public class ScheduleVisualizer {
 
         JScrollPane tableScrollPane = new JScrollPane(table);
         tableScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        tableScrollPane.getViewport().setBackground(UIUtils.PANEL_BACKGROUND);
 
         tablePanel.add(tableScrollPane, BorderLayout.CENTER);
 
@@ -508,11 +528,12 @@ public class ScheduleVisualizer {
      */
     private static void addStatField(JPanel panel, String label, String value) {
         JLabel lblField = new JLabel(label + ":");
-        lblField.setFont(NORMAL_FONT);
-        lblField.setForeground(Color.DARK_GRAY);
+        lblField.setFont(UIUtils.NORMAL_FONT);
+        lblField.setForeground(UIUtils.TEXT_SECONDARY);
 
         JLabel lblValue = new JLabel(value);
-        lblValue.setFont(NORMAL_FONT.deriveFont(Font.BOLD));
+        lblValue.setFont(UIUtils.NORMAL_FONT.deriveFont(Font.BOLD));
+        lblValue.setForeground(UIUtils.TEXT_PRIMARY);
 
         panel.add(lblField);
         panel.add(lblValue);
@@ -524,12 +545,12 @@ public class ScheduleVisualizer {
     private static Border createSectionBorder(String title) {
         return BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder(
-                        BorderFactory.createLineBorder(GRID_COLOR),
+                        BorderFactory.createLineBorder(UIUtils.GRID_COLOR),
                         title,
                         TitledBorder.LEFT,
                         TitledBorder.TOP,
-                        HEADER_FONT,
-                        HEADER_COLOR),
+                        UIUtils.HEADER_FONT,
+                        UIUtils.PRIMARY_COLOR),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10));
     }
 
@@ -547,7 +568,7 @@ public class ScheduleVisualizer {
 
         public SchedulePanel(ALPSolution solution) {
             this.solution = solution;
-            setBackground(PANEL_BACKGROUND);
+            setBackground(UIUtils.PANEL_BACKGROUND);
 
             // Make the panel scrollable with proper sizing
             int numRunways = solution.getInstance().getNumRunways();
@@ -588,12 +609,12 @@ public class ScheduleVisualizer {
             int totalHeight = margin + numRunways * (barHeight + spacing);
             for (int i = 0; i < numRunways; i++) {
                 int y = margin + i * (barHeight + spacing);
-                g2d.setColor(GRID_COLOR);
+                g2d.setColor(UIUtils.GRID_COLOR);
                 g2d.fillRect(margin, y, getWidth() - margin * 2, barHeight);
             }
 
             // Draw vertical grid lines
-            g2d.setColor(GRID_COLOR);
+            g2d.setColor(UIUtils.GRID_COLOR);
             int tickInterval = Math.max(1, maxLandingTime / 20); // Aim for roughly 20 ticks
             for (int t = 0; t <= maxLandingTime; t += tickInterval) {
                 int x = margin + t * timeScale;
@@ -601,11 +622,11 @@ public class ScheduleVisualizer {
             }
 
             // Draw time axis
-            g2d.setColor(TIME_AXIS_COLOR);
+            g2d.setColor(UIUtils.TEXT_SECONDARY);
             g2d.drawLine(margin, totalHeight, margin + maxLandingTime * timeScale, totalHeight);
 
             // Draw time ticks and labels
-            g2d.setFont(SMALL_FONT);
+            g2d.setFont(UIUtils.SMALL_FONT);
             for (int t = 0; t <= maxLandingTime; t += tickInterval) {
                 int x = margin + t * timeScale;
                 g2d.drawLine(x, totalHeight, x, totalHeight + 5);
@@ -616,18 +637,18 @@ public class ScheduleVisualizer {
             }
 
             // Draw runway labels
-            g2d.setFont(NORMAL_FONT);
+            g2d.setFont(UIUtils.NORMAL_FONT);
             for (int r = 0; r < numRunways; r++) {
                 int y = margin + r * (barHeight + spacing) + barHeight / 2;
-                g2d.setColor(HEADER_COLOR);
+                g2d.setColor(UIUtils.PRIMARY_COLOR);
                 g2d.drawString("Runway " + (r + 1), 5, y + 5);
             }
 
             // Prepare colors for each aircraft
             List<Color> colors = new ArrayList<>();
             for (int i = 0; i < numAircraft; i++) {
-                int hue = (i * 137) % 360; // Golden ratio creates good color distribution
-                colors.add(Color.getHSBColor(hue / 360.0f, 0.7f, 0.9f));
+                float hue = (float) ((i * 0.618033988749895) % 1.0); // Golden ratio
+                colors.add(Color.getHSBColor(hue, 0.8f, 0.9f));
             }
 
             // Draw aircraft time windows as background bars
@@ -686,7 +707,7 @@ public class ScheduleVisualizer {
 
                 // Draw aircraft ID
                 g2d.setColor(Color.WHITE);
-                g2d.setFont(SMALL_FONT);
+                g2d.setFont(UIUtils.SMALL_FONT);
                 String aircraftId = "A" + (i + 1);
                 FontMetrics fm = g2d.getFontMetrics();
                 int textWidth = fm.stringWidth(aircraftId);
@@ -696,20 +717,20 @@ public class ScheduleVisualizer {
 
             // Draw current time indicator
             int timeX = margin + currentTime * timeScale;
-            g2d.setColor(TIMELINE_COLOR);
+            g2d.setColor(UIUtils.ACCENT_COLOR);
             g2d.setStroke(new BasicStroke(2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND,
                     0, new float[] { 8, 4 }, 0));
             g2d.drawLine(timeX, margin - padding, timeX, totalHeight);
             g2d.setStroke(new BasicStroke(1f));
 
             // Display current time
-            g2d.setFont(HEADER_FONT);
-            g2d.setColor(TIMELINE_COLOR);
+            g2d.setFont(UIUtils.HEADER_FONT);
+            g2d.setColor(UIUtils.ACCENT_COLOR);
             g2d.drawString("t = " + currentTime, timeX + 5, margin - padding / 2);
         }
 
         private void drawTooltip(Graphics2D g2d, String text, int x, int y) {
-            FontMetrics fm = g2d.getFontMetrics(NORMAL_FONT);
+            FontMetrics fm = g2d.getFontMetrics(UIUtils.NORMAL_FONT);
             int textWidth = fm.stringWidth(text);
             int textHeight = fm.getHeight();
 
@@ -725,7 +746,7 @@ public class ScheduleVisualizer {
 
             // Draw tooltip text
             g2d.setColor(Color.WHITE);
-            g2d.setFont(NORMAL_FONT);
+            g2d.setFont(UIUtils.NORMAL_FONT);
             g2d.drawString(text, boxX + padding, boxY + textHeight);
         }
     }
@@ -742,7 +763,7 @@ public class ScheduleVisualizer {
 
         public SimulationPanel(ALPSolution solution) {
             this.solution = solution;
-            setBackground(PANEL_BACKGROUND);
+            setBackground(UIUtils.PANEL_BACKGROUND);
 
             // Initialize aircraft positions (off-screen)
             for (int i = 0; i < solution.getInstance().getNumAircraft(); i++) {
@@ -833,7 +854,7 @@ public class ScheduleVisualizer {
 
             // Draw sky
             GradientPaint skyGradient = new GradientPaint(
-                    0, 0, new Color(135, 206, 235),
+                    0, 0, new Color(170, 210, 240),
                     0, getHeight(), new Color(220, 240, 255));
             g2d.setPaint(skyGradient);
             g2d.fillRect(0, 0, getWidth(), getHeight());
@@ -866,7 +887,7 @@ public class ScheduleVisualizer {
                 }
 
                 // Runway number
-                g2d.setFont(NORMAL_FONT.deriveFont(Font.BOLD));
+                g2d.setFont(UIUtils.NORMAL_FONT.deriveFont(Font.BOLD));
                 g2d.setColor(Color.WHITE);
                 g2d.drawString("R" + (r + 1), x - 25, y + runwayHeight / 2 + 5);
             }
@@ -874,8 +895,8 @@ public class ScheduleVisualizer {
             // Prepare colors for each aircraft
             List<Color> colors = new ArrayList<>();
             for (int i = 0; i < numAircraft; i++) {
-                int hue = (i * 137) % 360; // Golden ratio creates good color distribution
-                colors.add(Color.getHSBColor(hue / 360.0f, 0.7f, 0.9f));
+                float hue = (float) ((i * 0.618033988749895) % 1.0); // Golden ratio
+                colors.add(Color.getHSBColor(hue, 0.8f, 0.9f));
             }
 
             // Draw aircraft
@@ -894,7 +915,7 @@ public class ScheduleVisualizer {
             g2d.setColor(new Color(0, 0, 0, 180));
             g2d.fillRoundRect(10, 10, 150, 30, 10, 10);
             g2d.setColor(Color.WHITE);
-            g2d.setFont(HEADER_FONT);
+            g2d.setFont(UIUtils.HEADER_FONT);
             g2d.drawString("Time: " + currentTime, 20, 30);
 
             // Draw aircraft info if hovering
@@ -971,7 +992,7 @@ public class ScheduleVisualizer {
 
             // Add aircraft ID
             g2d.setColor(Color.WHITE);
-            g2d.setFont(SMALL_FONT);
+            g2d.setFont(UIUtils.SMALL_FONT);
             String aircraftIdStr = "A" + (aircraftId + 1);
             FontMetrics fm = g2d.getFontMetrics();
             g2d.drawString(aircraftIdStr, (int) (x - fm.stringWidth(aircraftIdStr) / 2), (int) y + fm.getHeight() / 4);
@@ -994,7 +1015,7 @@ public class ScheduleVisualizer {
             };
 
             // Calculate box size
-            g2d.setFont(NORMAL_FONT);
+            g2d.setFont(UIUtils.NORMAL_FONT);
             FontMetrics fm = g2d.getFontMetrics();
             int lineHeight = fm.getHeight();
             int maxWidth = 0;
