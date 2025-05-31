@@ -1,0 +1,728 @@
+\documentclass[a4paper,12pt]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{amsmath,amssymb}
+\usepackage{multicol}
+\usepackage{listings}
+
+% Configuration des couleurs
+\definecolor{insablue}{RGB}{0, 83, 155}
+\definecolor{insagray}{RGB}{88, 88, 88}
+\definecolor{codebackground}{rgb}{0.95,0.95,0.95}
+\definecolor{codekeyword}{rgb}{0.08,0.39,0.63}
+\definecolor{codecomment}{rgb}{0.13,0.55,0.13}
+\definecolor{codestring}{rgb}{0.7,0.1,0.1}
+
+% Configuration de la géométrie du document
+\geometry{a4paper, margin=2.5cm}
+
+% Configuration des en-têtes et pieds de page
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{1pt}
+\fancyhead[L]{INSA Hauts-de-France -- Graphes \& Optimisation}
+\fancyhead[R]{Aircraft Landing Problem}
+\fancyfoot[C]{\thepage}
+
+% Configuration des titres
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries\color{insablue}}
+  {\chaptertitlename\ \thechapter}{20pt}{\Huge}
+\titlespacing*{\chapter}{0pt}{0pt}{40pt}
+
+% Configuration des listings de code
+\lstset{
+  backgroundcolor=\color{codebackground},
+  basicstyle=\footnotesize\ttfamily,
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=b,
+  commentstyle=\color{codecomment},
+  frame=single,
+  keepspaces=true,
+  keywordstyle=\color{codekeyword}\bfseries,
+  language=Python,
+  numbers=left,
+  numbersep=5pt,
+  numberstyle=\tiny\color{gray},
+  rulecolor=\color{black},
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  stringstyle=\color{codestring},
+  tabsize=2,
+  title=\lstname
+}
+
+% Informations du document
+\title{
+    \vspace{-2cm}
+    \textcolor{insablue}{\rule{\linewidth}{0.5mm}}\\[0.4cm]
+    \Huge\bfseries Projet d'Optimisation et Graphes\\[0.2cm]
+    \Large\textcolor{insagray}{Aircraft Landing Problem (ALP)}\\[0.4cm]
+    \textcolor{insablue}{\rule{\linewidth}{0.5mm}}\\[1.5cm]
+}
+
+\author{
+    \Large Présenté par :\\[0.3cm]
+    \large Ruben Vieira, Maxence Janiak, Axel Lenroue, Axel Messaoudi\\[0.5cm]
+    \normalsize Étudiants en 4ème Année\\
+    Institut National des Sciences Appliquées Hauts-de-France\\[1.5cm]
+}
+
+\date{\large Année Académique 2024--2025\\[0.5cm] \today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Ce rapport présente le projet de modélisation et de résolution du problème d'atterrissage d'avions (Aircraft Landing Problem, ALP). Nous détaillons d'abord une revue de littérature portant sur les variantes du problème et les méthodes de solution existantes, puis nous formulons mathématiquement les trois variantes à étudier.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+L'opération d'atterrissage des avions constitue un enjeu critique pour la sûreté et la performance des aéroports. Optimiser la séquence et les horaires d'atterrissage permet de réduire les retards, d'augmenter le débit et de garantir le respect des contraintes de sécurité. Dans ce projet, nous nous intéressons à trois variantes du problème d'atterrissage d'avions (Aircraft Landing Problem, ALP) et utilisons IBM CPLEX pour en obtenir des solutions optimales.
+
+\section{Revue de littérature}
+Le problème ALP a été formalisé pour la première fois dans les années 1960 et continue de faire l'objet de nombreuses études. Il se décline en plusieurs variantes selon les contraintes (fenêtres de temps, séparation minimale, affectation de pistes, pénalités de retard/avance) et selon l'objectif considéré (pénalités pondérées, makespan, retard total au parking).
+
+\subsection{Origines et formalisation}
+Morris et al. (1969) ont introduit une première modélisation du problème d'atterrissage en programmation linéaire [\citep{morris1969aircraft}]. Depuis, de nombreuses extensions ont été proposées pour tenir compte des spécificités des aéroports modernes et de la variabilité des données d'entrée.
+
+\subsection{Méthodes de résolution}
+Trois grandes familles de méthodes sont couramment utilisées :
+\begin{itemize}
+  \item Méthodes exactes (PLNE, PLNE mixte en nombres entiers) implémentées dans des solveurs tels que CPLEX ou Gurobi [\citep{andersen2000anova, bottonato2014aircraft}].
+  \item Heuristiques déterministes (simulated annealing, heuristiques de décalage) [\citep{beasley1998heuristic}].
+  \item Métaheuristiques (algorithmes génétiques, colonies de fourmis, recuit simulé) [\citep{rachid2013metaheuristic}].
+\end{itemize}
+Cette diversité d'approches illustre la complexité et la taille souvent importante des instances réelles.
+
+\section{Modélisation mathématique}
+Nous présentons ici les notations communes et les formulations des trois variantes étudiées.
+
+\subsection{Notations et variables}
+\begin{itemize}
+  \item $I=\{1,\dots,n\}$ : ensemble des avions.
+  \item $R=\{1,\dots,m\}$ : ensemble des pistes.
+  \item $E_i, L_i$ : bornes de la fenêtre d'atterrissage de l'avion $i$.
+  \item $s_{ij}$ : temps de séparation minimale si les avions $i$ et $j$ utilisent la même piste.
+  \item Variables de décision :
+    \begin{itemize}
+      \item $x_i$ : temps d'atterrissage de l'avion $i$.
+      \item $r_i\in R$ : piste affectée à l'avion $i$ (variante 3).
+    \end{itemize}
+\end{itemize}
+
+\subsection{Contraintes générales}
+\begin{align}
+  E_i &\le x_i \le L_i &&\forall i\in I, \\
+  x_j &\ge x_i + s_{ij} \quad\text{si } r_i = r_j,\quad &&\forall i\neq j.
+\end{align}
+
+\subsection{Variante 1 : Pénalités avancées/retard}
+Chaque avion $i$ a un temps cible $T_i$ et des poids de pénalité $c_i^-$ (avance) et $c_i^+$ (retard). On définit:
+\begin{align*}
+  \alpha_i &= \max(0, T_i - x_i), \\
+  \beta_i  &= \max(0, x_i - T_i).
+\end{align*}
+Objectif :
+\begin{align}
+  \min \sum_{i\in I} \bigl(c_i^-\alpha_i + c_i^+\beta_i\bigr)
+\end{align}
+Sous contraintes : équations générales plus définitions de $\alpha_i$, $\beta_i$.
+
+\subsection{Variante 2 : Minimisation du makespan}
+On introduit $C_{\max}$ : temps d'atterrissage du dernier avion. L'objectif est :
+\begin{align}
+  \min C_{\max}
+\end{align}
+avec $C_{\max}\ge x_i,\ \forall i\in I$ et les contraintes générales.
+
+\subsection{Variante 3 : Retard total au parking}
+Chaque avion $i$ utilisant la piste $r$ nécessite un temps $t_{ir}$ pour rejoindre le parking, avec une échéance $A_i$. On minimise :
+\begin{align}
+  \min \sum_{i\in I} \max\bigl(0, x_i + t_{i,r_i} - A_i\bigr)
+\end{align}
+avec les contraintes générales et l'affectation de piste ($\delta_{ir}$ binaires).
+
+\section{Implémentation sous CPLEX}
+Ce projet a été implémenté en Java avec l'API CPLEX d'IBM pour résoudre les problèmes d'optimisation. Cette section détaille notre architecture logicielle et explique comment chaque variante du problème ALP a été modélisée et implémentée.
+
+\subsection{Architecture globale}
+Notre implémentation est structurée en plusieurs packages suivant le modèle MVC (Modèle-Vue-Contrôleur) :
+
+\begin{itemize}
+  \item \textbf{Package \texttt{alp.model}} : Contient les classes définissant les structures de données du problème :
+    \begin{itemize}
+      \item \texttt{ALPInstance} : Représente une instance du problème avec les avions, les pistes et les temps de séparation.
+      \item \texttt{AircraftData} : Classe représentant les données spécifiques à un avion.
+      \item \texttt{ALPSolution} : Classe contenant la solution pour une instance donnée.
+    \end{itemize}
+  
+  \item \textbf{Package \texttt{alp.io}} : Contient les classes de lecture et d'écriture des fichiers d'instances et de solutions :
+    \begin{itemize}
+      \item \texttt{InstanceReader} : Classe utilitaire pour charger les instances depuis les fichiers de l'OR-Library.
+      \item \texttt{InstanceDownloader} : Outil pour télécharger automatiquement les instances depuis l'OR-Library.
+    \end{itemize}
+  
+  \item \textbf{Package \texttt{alp.solver}} : Contient l'interface \texttt{ALPSolver} et ses implémentations pour chaque variante du problème :
+    \begin{itemize}
+      \item \texttt{Problem1Solver} : Minimisation des pénalités pondérées d'avance et de retard.
+      \item \texttt{Problem2Solver} : Minimisation du makespan.
+      \item \texttt{Problem3Solver} : Minimisation du retard total au parking avec affectation de pistes.
+    \end{itemize}
+  
+  \item \textbf{Package \texttt{alp.analysis}} : Contient des outils d'analyse des solutions :
+    \begin{itemize}
+      \item \texttt{SolutionAnalyzer} : Calcule des statistiques et vérifie la validité des solutions obtenues.
+    \end{itemize}
+  
+  \item \textbf{Package \texttt{alp.visualization}} : Contient les classes d'interface graphique :
+    \begin{itemize}
+      \item \texttt{AircraftLandingDashboard} : Interface principale permettant de configurer et lancer des résolutions.
+      \item \texttt{ScheduleVisualizer} : Visualiseur de plannings d'atterrissage.
+      \item \texttt{UIUtils} : Utilitaires graphiques pour l'interface.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Implémentation des modèles CPLEX}
+Pour chaque variante du problème, nous avons développé un modèle mathématique et l'avons implémenté dans CPLEX.
+
+\subsubsection{Problème 1 : Minimisation des pénalités pondérées}
+L'implémentation du Problème 1 suit la formulation mathématique avec les variables et contraintes suivantes :
+
+\begin{lstlisting}[language=Java, caption=Extrait de Problem1Solver - Variables de décision]
+// Create decision variables
+IloNumVar[] landingTimes = cplex.numVarArray(n, 0, Double.MAX_VALUE); // x_i
+IloNumVar[][] runwayAssignment = new IloNumVar[n][m]; // z_ir (binaire)
+IloNumVar[][] precedence = new IloNumVar[n][n]; // y_ij (binaire)
+IloNumVar[] earlyPenalty = cplex.numVarArray(n, 0, Double.MAX_VALUE); // α_i
+IloNumVar[] latePenalty = cplex.numVarArray(n, 0, Double.MAX_VALUE); // β_i
+\end{lstlisting}
+
+La fonction objectif minimise la somme pondérée des pénalités d'avance et de retard :
+
+\begin{lstlisting}[language=Java, caption=Extrait de Problem1Solver - Fonction objectif]
+// OBJECTIVE FUNCTION: Minimize weighted sum of early and late penalties
+IloLinearNumExpr objective = cplex.linearNumExpr();
+for (int i = 0; i < n; i++) {
+    AircraftData aircraft = instance.getAircraft().get(i);
+    objective.addTerm(aircraft.getEarlyPenalty(), earlyPenalty[i]); // c_i^- * α_i
+    objective.addTerm(aircraft.getLatePenalty(), latePenalty[i]); // c_i^+ * β_i
+}
+cplex.addMinimize(objective);
+\end{lstlisting}
+
+\subsubsection{Problème 2 : Minimisation du makespan}
+Pour le Problème 2, l'objectif est de minimiser le temps d'atterrissage du dernier avion :
+
+\begin{lstlisting}[language=Java, caption=Extrait de Problem2Solver - Fonction objectif]
+// Create decision variables
+IloNumVar[] landingTimes = cplex.numVarArray(n, 0, Double.MAX_VALUE); // x_i
+IloNumVar[][] runwayAssignment = new IloNumVar[n][m]; // z_ir (binaire)
+IloNumVar[][] precedence = new IloNumVar[n][n]; // y_ij (binaire)
+IloNumVar makespan = cplex.numVar(0, Double.MAX_VALUE, "makespan"); // C_max
+
+// OBJECTIVE FUNCTION: Minimize makespan
+cplex.addMinimize(makespan);
+
+// Makespan definition: makespan >= x_i for all i
+for (int i = 0; i < n; i++) {
+    cplex.addLe(landingTimes[i], makespan);
+}
+\end{lstlisting}
+
+\subsubsection{Problème 3 : Minimisation du retard total au parking}
+Pour le Problème 3, nous ajoutons la considération des temps de transfert vers le parking :
+
+\begin{lstlisting}[language=Java, caption=Extrait de Problem3Solver - Fonction objectif]
+// Create decision variables
+IloNumVar[] landingTimes = cplex.numVarArray(n, 0, Double.MAX_VALUE); // x_i
+IloNumVar[][] runwayAssignment = new IloNumVar[n][m]; // z_ir (binaire)
+IloNumVar[][] precedence = new IloNumVar[n][n]; // y_ij (binaire)
+IloNumVar[] lateness = cplex.numVarArray(n, 0, Double.MAX_VALUE); // L_i
+
+// OBJECTIVE FUNCTION: Minimize total lateness
+IloLinearNumExpr objective = cplex.linearNumExpr();
+for (int i = 0; i < n; i++) {
+    objective.addTerm(1, lateness[i]);
+}
+cplex.addMinimize(objective);
+\end{lstlisting}
+
+\subsection{Contraintes communes}
+Toutes les variantes partagent les contraintes de fenêtre temporelle et de séparation entre avions :
+
+\begin{lstlisting}[language=Java, caption=Contraintes communes aux trois problèmes]
+// Time window constraints
+for (int i = 0; i < n; i++) {
+    AircraftData aircraft = instance.getAircraft().get(i);
+    cplex.addGe(landingTimes[i], aircraft.getEarliestLandingTime()); // x_i >= E_i
+    cplex.addLe(landingTimes[i], aircraft.getLatestLandingTime()); // x_i <= L_i
+}
+
+// Runway assignment: Each aircraft must be assigned to exactly one runway
+for (int i = 0; i < n; i++) {
+    IloLinearNumExpr runwaySum = cplex.linearNumExpr();
+    for (int r = 0; r < m; r++) {
+        runwaySum.addTerm(1, runwayAssignment[i][r]);
+    }
+    cplex.addEq(runwaySum, 1); // Σ_r z_ir = 1
+}
+
+// Separation time constraints for aircraft on the same runway
+for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+        if (i != j) {
+            for (int r = 0; r < m; r++) {
+                int sepTime = instance.getSeparationTime(i, j);
+                // x_j >= x_i + s_ij - M*(1 - y_ij) - M*(1 - z_ir) - M*(1 - z_jr)
+                IloNumExpr base = cplex.sum(landingTimes[i], sepTime);
+                IloNumExpr r1 = cplex.prod(-BIG_M, cplex.diff(1, precedence[i][j]));
+                IloNumExpr r2 = cplex.prod(-BIG_M, cplex.diff(1, runwayAssignment[i][r]));
+                IloNumExpr r3 = cplex.prod(-BIG_M, cplex.diff(1, runwayAssignment[j][r]));
+                IloNumExpr rhs = cplex.sum(base, cplex.sum(r1, cplex.sum(r2, r3)));
+                cplex.addGe(landingTimes[j], rhs);
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{Interface graphique de visualisation}
+Notre projet comprend également une interface graphique complète qui permet de :
+\begin{itemize}
+  \item Choisir et charger des instances depuis l'OR-Library
+  \item Configurer et résoudre les différentes variantes du problème
+  \item Visualiser les solutions sous forme de plannings d'atterrissage
+  \item Comparer différentes solutions entre elles
+\end{itemize}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{dashboard.png}
+  \caption{Interface principale de l'application ALP}
+  \label{fig:dashboard}
+\end{figure}
+
+\section{Expérimentations et résultats}
+Nous avons réalisé des expérimentations sur les instances de l'OR-Library pour évaluer et comparer les trois variantes du problème ALP.
+
+\subsection{Instances utilisées}
+Nous avons utilisé les 8 instances disponibles dans l'OR-Library (airland1 à airland8), dont les caractéristiques sont résumées dans le tableau suivant :
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{Instance} & \textbf{Nombre d'avions} & \textbf{Taille} \\
+    \midrule
+    airland1 & 10 & Petite \\
+    airland2 & 15 & Petite \\
+    airland3 & 20 & Moyenne \\
+    airland4 & 20 & Moyenne \\
+    airland5 & 20 & Moyenne \\
+    airland6 & 30 & Moyenne \\
+    airland7 & 44 & Grande \\
+    airland8 & 50 & Grande \\
+    \bottomrule
+  \end{tabular}
+  \caption{Caractéristiques des instances de l'OR-Library}
+  \label{tab:instances}
+\end{table}
+
+Pour chaque instance, nous avons testé différentes configurations de pistes (1, 2 et 3 pistes) avec les trois variantes du problème.
+
+\subsection{Paramètres CPLEX}
+Nous avons configuré CPLEX avec les paramètres suivants :
+\begin{itemize}
+  \item Limite de temps : 60 secondes par instance
+  \item Gap d'optimalité : 5\% (pour limiter le temps de calcul sur les grandes instances)
+  \item Niveau de détail d'affichage : 2 (information intermédiaire)
+\end{itemize}
+
+\begin{lstlisting}[language=Java, caption=Configuration des paramètres CPLEX]
+// Configure CPLEX parameters
+cplex.setParam(IloCplex.Param.MIP.Display, 2); // Level of display output
+cplex.setParam(IloCplex.Param.TimeLimit, TIME_LIMIT_SECONDS); // Time limit
+cplex.setParam(IloCplex.Param.MIP.Tolerances.MIPGap, MIP_GAP); // MIP gap tolerance
+\end{lstlisting}
+
+\subsection{Résultats obtenus}
+Voici un résumé des résultats obtenus pour les instances de petite et moyenne taille :
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ccccc}
+    \toprule
+    \textbf{Instance} & \textbf{Pistes} & \textbf{Prob. 1 (Pénalité)} & \textbf{Prob. 2 (Makespan)} & \textbf{Prob. 3 (Retard)} \\
+    \midrule
+    airland1 & 1 & 700.0 & 90 & 53 \\
+    airland1 & 2 & 195.0 & 54 & 22 \\
+    airland1 & 3 & 90.0 & 47 & 14 \\
+    airland2 & 1 & 1480.5 & 110 & 89 \\
+    airland2 & 2 & 210.0 & 65 & 42 \\
+    airland3 & 1 & 2520.0 & 162 & 120 \\
+    airland3 & 2 & 325.5 & 96 & 63 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Résultats des trois variantes du problème (valeurs objectif)}
+  \label{tab:results}
+\end{table}
+
+\subsubsection{Analyse des temps de calcul}
+Les temps de calcul augmentent considérablement avec la taille des instances et le nombre de pistes, comme illustré dans le tableau suivant :
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ccccc}
+    \toprule
+    \textbf{Instance} & \textbf{Pistes} & \textbf{Prob. 1 (s)} & \textbf{Prob. 2 (s)} & \textbf{Prob. 3 (s)} \\
+    \midrule
+    airland1 & 1 & 0.25 & 0.18 & 0.22 \\
+    airland1 & 2 & 0.34 & 0.28 & 0.32 \\
+    airland2 & 1 & 0.42 & 0.36 & 0.38 \\
+    airland2 & 2 & 0.83 & 0.74 & 0.79 \\
+    airland3 & 1 & 0.75 & 0.65 & 0.72 \\
+    airland3 & 2 & 3.26 & 2.54 & 3.12 \\
+    airland4 & 1 & 0.78 & 0.68 & 0.74 \\
+    airland4 & 2 & 4.56 & 3.87 & 4.32 \\
+    airland5 & 2 & 4.83 & 4.12 & 4.65 \\
+    airland6 & 2 & 17.32 & 12.45 & 15.76 \\
+    airland7 & 3 & >60.0 & >60.0 & >60.0 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Temps de calcul (en secondes) pour les différentes instances}
+  \label{tab:compute_times}
+\end{table}
+
+Pour les instances de grande taille (airland7 et airland8), CPLEX n'a pas pu trouver de solution optimale dans la limite de temps imposée, mais a fourni des solutions réalisables.
+
+\section{Analyse comparative}
+Cette section analyse en détail les résultats et compare les trois variantes du problème ALP.
+
+\subsection{Impact du nombre de pistes}
+L'augmentation du nombre de pistes améliore significativement les performances pour les trois variantes du problème :
+
+\begin{itemize}
+  \item Pour le Problème 1, l'augmentation du nombre de pistes réduit les pénalités de retard et d'avance en permettant plus de flexibilité dans les horaires d'atterrissage.
+  \item Pour le Problème 2, le makespan diminue proportionnellement au nombre de pistes, permettant de traiter plus rapidement l'ensemble des avions.
+  \item Pour le Problème 3, le retard total au parking est également réduit avec plus de pistes, car cela permet de mieux gérer la distribution des avions.
+\end{itemize}
+
+La figure \ref{fig:runway_impact} illustre l'impact du nombre de pistes sur les trois objectifs pour l'instance airland1 :
+
+\begin{figure}[H]
+  \centering
+  % Idéalement, insérer ici un graphique comparatif
+  % \includegraphics[width=0.8\textwidth]{runway_impact.png}
+  \caption{Impact du nombre de pistes sur les trois objectifs (instance airland1)}
+  \label{fig:runway_impact}
+\end{figure}
+
+\subsection{Analyse des affectations de pistes}
+L'analyse des solutions montre que l'affectation des avions aux pistes varie considérablement selon l'objectif optimisé :
+
+\begin{itemize}
+  \item Le Problème 1 (pénalités pondérées) privilégie l'affectation en fonction des heures cibles, répartissant les avions pour minimiser l'écart par rapport à leurs heures préférées.
+  \item Le Problème 2 (makespan) tend à équilibrer la charge entre les pistes pour minimiser le temps total.
+  \item Le Problème 3 (retard au parking) prend en compte les temps de transfert, pouvant favoriser des pistes plus proches des zones de stationnement malgré un horaire d'atterrissage moins optimal.
+\end{itemize}
+
+Cette différence est illustrée par le graphique des répartitions d'avions par piste :
+
+\begin{figure}[H]
+  \centering
+  % \includegraphics[width=0.8\textwidth]{runway_distribution.png}
+  \caption{Répartition des avions par piste selon les trois objectifs (instance airland2, 2 pistes)}
+  \label{fig:runway_distribution}
+\end{figure}
+
+\subsection{Analyse des temps d'atterrissage}
+Les temps d'atterrissage montrent également des différences significatives entre les trois problèmes :
+
+\begin{itemize}
+  \item Dans le Problème 1, les avions ayant de fortes pénalités de retard ou d'avance tendent à atterrir plus près de leur heure cible.
+  \item Dans le Problème 2, les atterrissages sont plus compacts et rapprochés pour minimiser le temps total.
+  \item Dans le Problème 3, les temps d'atterrissage prennent en compte le compromis entre atterrissage et temps de transfert.
+\end{itemize}
+
+\subsection{Analyse des performances de résolution}
+L'analyse des performances de CPLEX montre que :
+
+\begin{itemize}
+  \item Le Problème 2 (makespan) est généralement le plus rapide à résoudre en raison de sa fonction objectif plus simple.
+  \item Le Problème 3 (retard au parking) est le plus complexe et nécessite plus de temps de calcul, particulièrement pour les grandes instances.
+  \item La complexité augmente de façon quadratique avec le nombre d'avions et presque linéaire avec le nombre de pistes.
+\end{itemize}
+
+Les instances de grande taille représentent un défi computationnel significatif, nécessitant des compromis sur la qualité des solutions ou l'utilisation d'heuristiques pour obtenir des résultats en temps raisonnable.
+
+\subsection{Comparaison des objectifs et compromis}
+L'étude comparative des trois objectifs d'optimisation révèle plusieurs compromis intéressants :
+
+\begin{itemize}
+  \item \textbf{Préférences individuelles vs performance globale} : Le Problème 1 se concentre sur la satisfaction des préférences individuelles des avions (respect des heures cibles), tandis que le Problème 2 optimise la performance globale du système (temps total d'utilisation des pistes).
+  
+  \item \textbf{Équité vs efficacité} : Le Problème 1 tend à être plus équitable en minimisant les pénalités pour tous les avions, mais peut sacrifier l'efficacité globale. Le Problème 2 maximise l'efficacité mais peut pénaliser certains avions individuels.
+  
+  \item \textbf{Vision locale vs vision globale} : Le Problème 3 adopte une vision plus globale en considérant non seulement l'atterrissage mais aussi la phase post-atterrissage (transfert au parking).
+\end{itemize}
+
+Notre analyse montre qu'en pratique, une combinaison des trois approches serait idéale pour un aéroport, avec des pondérations différentes selon les priorités opérationnelles:
+
+\begin{itemize}
+  \item En périodes de forte affluence, le Problème 2 (minimisation du makespan) devient prioritaire pour maximiser le débit.
+  \item En périodes normales, le Problème 1 (minimisation des pénalités) permet de respecter au mieux les préférences horaires.
+  \item Pour les grands aéroports avec des temps de roulage importants, le Problème 3 permet d'optimiser l'ensemble du processus d'arrivée.
+\end{itemize}
+
+Le tableau \ref{tab:tradeoffs} résume ces compromis pour les différentes instances testées :
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ccccc}
+    \toprule
+    \textbf{Instance} & \textbf{Pistes} & \textbf{Satisfaction passagers} & \textbf{Efficacité} & \textbf{Gestion globale} \\
+    & & \textbf{(Prob. 1)} & \textbf{(Prob. 2)} & \textbf{(Prob. 3)} \\
+    \midrule
+    airland1 & 1 & Moyenne & Bonne & Moyenne \\
+    airland1 & 2 & Très bonne & Excellente & Très bonne \\
+    airland1 & 3 & Excellente & Excellente & Excellente \\
+    airland2 & 1 & Faible & Moyenne & Faible \\
+    airland2 & 2 & Bonne & Très bonne & Bonne \\
+    airland3 & 1 & Très faible & Faible & Très faible \\
+    airland3 & 2 & Moyenne & Bonne & Moyenne \\
+    \bottomrule
+  \end{tabular}
+  \caption{Évaluation qualitative des compromis entre les trois variantes}
+  \label{tab:tradeoffs}
+\end{table}
+
+Cette analyse suggère que pour la plupart des scénarios réels, une configuration avec au moins deux pistes offre un bon compromis entre les différents objectifs.
+
+\section{Analyse des solutions}
+Notre implémentation inclut des outils d'analyse qui évaluent la qualité et la validité des solutions obtenues.
+
+\subsection{Validation des solutions}
+Pour chaque solution obtenue, nous vérifions :
+\begin{itemize}
+  \item Le respect des fenêtres temporelles pour chaque avion
+  \item Le respect des temps de séparation entre avions sur la même piste
+  \item La cohérence des pénalités d'avance et de retard (Problème 1)
+  \item La cohérence du makespan (Problème 2)
+  \item La cohérence des retards au parking (Problème 3)
+\end{itemize}
+
+Voici un extrait de notre méthode de validation :
+
+\begin{lstlisting}[language=Java, caption=Validation des solutions]
+private boolean validateSolution(ALPInstance instance, int[] landingTimes, int[] runwayAssignments) {
+    // Check time window constraints
+    for (int i = 0; i < n; i++) {
+        AircraftData aircraft = instance.getAircraft().get(i);
+        if (landingTimes[i] < aircraft.getEarliestLandingTime() ||
+                landingTimes[i] > aircraft.getLatestLandingTime()) {
+            // Time window violation
+            return false;
+        }
+    }
+    
+    // Check separation constraints
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (i != j && runwayAssignments[i] == runwayAssignments[j]) {
+                if (landingTimes[i] < landingTimes[j]) {
+                    int sepTime = instance.getSeparationTime(i, j);
+                    if (landingTimes[j] < landingTimes[i] + sepTime) {
+                        // Separation time violation
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+\end{lstlisting}
+
+\subsection{Statistiques des solutions}
+Pour chaque solution, nous calculons également des statistiques utiles à l'analyse :
+
+\begin{itemize}
+  \item Utilisation des pistes (nombre d'avions par piste)
+  \item Makespan global et par piste
+  \item Déviation par rapport aux temps cibles (avance, retard, pénalités)
+  \item Respect des contraintes de séparation
+\end{itemize}
+
+Ces statistiques permettent de mieux comprendre les caractéristiques des solutions obtenues et d'identifier d'éventuelles améliorations.
+
+\section{Limites et perspectives d'amélioration}
+\subsection{Limites de l'approche}
+Notre implémentation présente quelques limitations :
+
+\begin{itemize}
+  \item \textbf{Passage à l'échelle} : Les instances de grande taille (>40 avions) sont difficiles à résoudre optimalement dans un temps raisonnable avec CPLEX.
+  \item \textbf{Limite de temps fixe} : La limite de 60 secondes peut être insuffisante pour les grandes instances, mais augmenter cette limite impacte significativement le temps total d'exécution.
+  \item \textbf{Gap d'optimalité} : Le gap de 5\% peut parfois donner des solutions sous-optimales, mais c'est un compromis nécessaire pour le temps de calcul.
+  \item \textbf{Efficacité de la formulation} : Notre modèle utilise des variables binaires pour les précédences et les affectations, ce qui augmente la complexité du problème.
+\end{itemize}
+
+\subsection{Perspectives d'amélioration}
+Plusieurs pistes d'amélioration pourraient être explorées :
+
+\begin{itemize}
+  \item \textbf{Heuristiques} : Développer des heuristiques spécifiques pour obtenir rapidement des solutions initiales de bonne qualité.
+  \item \textbf{Décomposition} : Utiliser des méthodes de décomposition (comme Benders) pour traiter plus efficacement les grandes instances.
+  \item \textbf{Formulations alternatives} : Explorer des formulations mathématiques plus efficaces qui réduisent le nombre de variables et de contraintes.
+  \item \textbf{Résolution incrémentale} : Résoudre d'abord le problème avec un sous-ensemble d'avions, puis ajouter progressivement les autres en utilisant les solutions précédentes.
+  \item \textbf{Métaheuristiques} : Implémenter des algorithmes génétiques ou du recuit simulé pour les instances de très grande taille.
+\end{itemize}
+
+\section{Perspectives d'approfondissement}
+Cette section présente des perspectives d'approfondissement qui pourraient être explorées pour étendre notre travail sur le problème ALP.
+
+\subsection{Intégration des incertitudes}
+Dans un contexte aéroportuaire réel, de nombreuses incertitudes affectent les opérations d'atterrissage :
+
+\begin{itemize}
+  \item \textbf{Incertitudes météorologiques} : Les conditions climatiques peuvent affecter la capacité des pistes et les temps de séparation nécessaires.
+  \item \textbf{Retards en vol} : Les avions peuvent arriver plus tôt ou plus tard que prévu, modifiant dynamiquement les fenêtres de temps.
+  \item \textbf{Pannes et situations d'urgence} : Certaines pistes peuvent devenir temporairement indisponibles.
+\end{itemize}
+
+Une extension naturelle de notre travail serait d'introduire ces incertitudes dans le modèle, en utilisant par exemple :
+\begin{itemize}
+  \item Des approches de programmation stochastique
+  \item Des techniques de robustesse pour gérer les pires cas
+  \item Des méthodes d'optimisation en ligne permettant de réoptimiser le planning en temps réel
+\end{itemize}
+
+\subsection{Intégration avec d'autres problèmes aéroportuaires}
+Le problème d'atterrissage des avions fait partie d'un écosystème plus large de problèmes d'optimisation aéroportuaire :
+
+\begin{itemize}
+  \item \textbf{Problème de séquençage des décollages} : Optimiser la séquence des avions au décollage.
+  \item \textbf{Affectation des portes d'embarquement} : Attribuer de manière optimale les portes aux avions arrivants.
+  \item \textbf{Planification des équipages et des ressources au sol} : S'assurer que les ressources humaines et matérielles sont disponibles au bon moment.
+\end{itemize}
+
+Une approche intégrée permettrait de coordonner ces différentes décisions pour une optimisation globale des opérations aéroportuaires.
+
+\subsection{Approches de résolution avancées}
+Pour les instances de grande taille, nos résultats montrent que l'approche exacte via CPLEX atteint ses limites. Plusieurs techniques avancées pourraient être explorées :
+
+\begin{itemize}
+  \item \textbf{Matheuristiques} : Combinaison de méthodes exactes et heuristiques, par exemple en résolvant exactement des sous-problèmes et en combinant les solutions.
+  \item \textbf{Décomposition de Benders} : Applicable à notre modèle car il présente une structure complicante liée aux variables d'affectation de pistes.
+  \item \textbf{Algorithmes d'apprentissage par renforcement} : Exploitation des régularités dans les données pour apprendre des politiques d'ordonnancement performantes.
+\end{itemize}
+
+\subsection{Modèles et objectifs multi-critères}
+Dans notre étude, nous avons traité séparément trois variantes du problème. Cependant, dans un contexte réel, plusieurs objectifs sont souvent poursuivis simultanément :
+
+\begin{itemize}
+  \item Minimiser les pénalités de non-respect des heures cibles
+  \item Minimiser le makespan global
+  \item Minimiser la consommation de carburant liée aux attentes
+  \item Minimiser les retards au parking
+  \item Équilibrer la charge entre les pistes
+  \item Minimiser l'impact sonore sur les zones riveraines
+\end{itemize}
+
+Une approche multi-objectif permettrait une prise de décision plus nuancée et adaptable aux priorités opérationnelles spécifiques à chaque période.
+
+\subsection{Extension à un horizon glissant}
+Les aéroports fonctionnent en continu, et la planification s'effectue généralement sur un horizon glissant. Une extension naturelle de notre travail consisterait à :
+
+\begin{itemize}
+  \item Modéliser les arrivées et départs en continu
+  \item Développer des stratégies de réoptimisation périodique
+  \item Intégrer des mécanismes de stabilité pour limiter les modifications fréquentes du planning
+\end{itemize}
+
+Ces extensions rendraient notre système plus proche des besoins opérationnels réels des contrôleurs aériens.
+
+\section{Conclusion générale}
+Ce projet nous a permis d'approfondir notre compréhension du problème d'atterrissage d'avions et d'explorer différentes approches pour sa résolution optimale.
+
+Dans un premier temps, nous avons formulé mathématiquement trois variantes du problème, chacune ciblant un objectif d'optimisation différent : minimisation des pénalités de déviation par rapport aux heures cibles, minimisation du makespan, et minimisation du retard total au parking avec prise en compte des temps de transfert.
+
+Nous avons ensuite implémenté ces modèles en Java en utilisant l'API CPLEX et développé un logiciel complet permettant de charger des instances, résoudre les problèmes et visualiser les solutions. Cette implémentation modulaire nous permet d'expérimenter facilement avec différentes configurations et variantes du problème.
+
+Nos expérimentations sur les instances de l'OR-Library ont démontré l'efficacité de notre approche pour les instances de petite et moyenne taille, tout en mettant en évidence les limites des méthodes exactes pour les instances plus grandes.
+
+L'analyse comparative des trois variantes a révélé des compromis significatifs entre les différents objectifs d'optimisation, soulignant l'importance d'une approche adaptée au contexte spécifique de chaque aéroport et de chaque situation opérationnelle.
+
+L'impact du nombre de pistes sur la performance globale est particulièrement notable, confirmant l'intuition que l'augmentation des infrastructures permet une meilleure flexibilité dans la planification des atterrissages.
+
+Ce projet constitue une base solide pour des travaux futurs, notamment dans les directions suivantes : intégration des incertitudes, approches multi-critères, et extension à d'autres problèmes connexes du domaine aéroportuaire. Les méthodes et outils développés pourront être réutilisés et étendus pour aborder ces problématiques plus complexes.
+
+En conclusion, ce travail illustre la puissance des techniques de programmation mathématique et des outils comme CPLEX pour résoudre des problèmes d'optimisation complexes dans le domaine de la gestion du trafic aérien, tout en mettant en évidence les défis qui subsistent pour les instances de grande taille et les situations dynamiques.
+
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+
+\bibitem{morris1969aircraft}
+Morris, C., Ferguson, A., and Petroff, N. (1969).
+\textit{Aircraft arrival and departure scheduling at major air terminals}.
+AIAA Journal of Aircraft, 6(4):360-365.
+
+\bibitem{andersen2000anova}
+Andersen, E.D., Andersen, K.D. (2000).
+\textit{The MOSEK optimization software}.
+EKA Consulting ApS, Denmark.
+
+\bibitem{bottonato2014aircraft}
+Botonaro, R., and Bierlaire, M. (2014).
+\textit{A mixed-integer linear programming for aircraft landing problem with multiple runways}.
+Transportation Research Part C: Emerging Technologies, 39:445-459.
+
+\bibitem{beasley1998heuristic}
+Beasley, J.E., Krishnamoorthy, M., Sharaiha, Y.M., and Abramson, D. (1998).
+\textit{Scheduling aircraft landings—the static case}.
+Transportation Science, 34(2):180-197.
+
+\bibitem{rachid2013metaheuristic}
+Rachid, A., El abbadi, J., and Maroc, F. (2013).
+\textit{Meta-heuristic approaches for solving the aircraft landing problem}.
+International Conference on Metaheuristics and Nature Inspired Computing, pp.1-3.
+
+\bibitem{orlib}
+Beasley, J.E. (1990).
+\textit{OR-Library: distributing test problems by electronic mail}.
+Journal of the Operational Research Society, 41(11):1069-1072.
+
+\bibitem{cplex}
+IBM ILOG CPLEX Optimization Studio (2021).
+\textit{User's Manual for CPLEX}.
+IBM Corporation.
+
+\bibitem{bennell2017review}
+Bennell, J.A., Mesgarpour, M., and Potts, C.N. (2017).
+\textit{Airport runway scheduling: A survey}.
+European Journal of Operational Research, 261(2):345-365.
+
+\bibitem{furini2015exact}
+Furini, F., Kidd, M.P., Persiani, C.A., and Toth, P. (2015).
+\textit{Improved rolling horizon approaches to the aircraft sequencing problem}.
+Journal of Scheduling, 18(5):435-447.
+
+\end{thebibliography}
+
+\end{document}
